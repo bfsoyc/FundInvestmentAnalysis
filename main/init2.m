@@ -7,6 +7,17 @@ global muDailyTable;
 global fjDailyTable;
 global idxDailyTable;
 global rDetialTable;
+global statList;
+
+%%%%%%%%%%%%%%%%需要统计的基金列表表头%%%%%%%%%%%%%%%%%%%%%%
+    statList.muName = 1;
+    statList.zsName = 3;
+    statList.fjAName = 5;
+    statList.fjBName = 7;
+    statList.aShare = 9;
+    statList.bShare = 10;
+    statList.applyFee = 11;
+    statList.redeemFee = 12;
 %%%%%%%%%%%%%%%%ERate的表头配置%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     erateTable.date = 1;        %时间
     erateTable.zhejialv = 2;    %折价率
@@ -51,41 +62,41 @@ global rDetialTable;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-resultTable.date = 1;
-resultTable.tlRate = 2;             %累计套利率
-resultTable.zsRate = 3;
-resultTable.vilidVar = 4;
-resultTable.opNum = 5;
-resultTable.yjNum = 6;
-resultTable.zjNum = 7;
-resultTable.nomoneyNum = 8;
-resultTable.zjRateLeft = 9;         %累计套利率剩余价值
-resultTable.zjRatePlus = 10;        %二倍折价套利额外收益
-resultTable.yjRateLeft = 11;        %二倍折价套利溢价减益
-resultTable.zjRate = 12;
-resultTable.yjRate = 13;
-resultTable.zjRateFail = 14;        %昨日溢价导致今日无法折价
-resultTable.validMoney = 15;
-resultTable.numOfInstance = 15;     %该变量记录result表格的列数
-%记录所有累加的变量accumulation variable :非直接统计量不放在下表，如opNum
-resultTable.accVar = [ resultTable.yjRate resultTable.zjRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail ]; 
-%记录所有需要标准化的变量（即除以assetManager2.typeNums） regularization variable;
-resultTable.regVar = [ resultTable.yjRate resultTable.zjRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail  ];
-%记录所有需要计算年化以及日均值的变量 transform variable
-resultTable.transVar = [ resultTable.yjRate resultTable.zjRate resultTable.tlRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail ]; 
+    resultTable.date = 1;
+    resultTable.tlRate = 2;             %累计套利率
+    resultTable.zsRate = 3;
+    resultTable.vilidVar = 4;
+    resultTable.opNum = 5;
+    resultTable.yjNum = 6;
+    resultTable.zjNum = 7;
+    resultTable.nomoneyNum = 8;
+    resultTable.zjRateLeft = 9;         %累计套利率剩余价值
+    resultTable.zjRatePlus = 10;        %二倍折价套利额外收益
+    resultTable.yjRateLeft = 11;        %二倍折价套利溢价减益
+    resultTable.zjRate = 12;
+    resultTable.yjRate = 13;
+    resultTable.zjRateFail = 14;        %昨日溢价导致今日无法折价
+    resultTable.validMoney = 15;
+    resultTable.numOfInstance = 15;     %该变量记录result表格的列数
+    %记录所有累加的变量accumulation variable :非直接统计量不放在下表，如opNum
+    resultTable.accVar = [ resultTable.yjRate resultTable.zjRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail ]; 
+    %记录所有需要标准化的变量（即除以assetManager2.typeNums） regularization variable;
+    resultTable.regVar = [ resultTable.yjRate resultTable.zjRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail  ];
+    %记录所有需要计算年化以及日均值的变量 transform variable
+    resultTable.transVar = [ resultTable.yjRate resultTable.zjRate resultTable.tlRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail ]; 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-rDetialTable.ZYRate = 1;
-rDetialTable.ZjRate = 2;
-rDetialTable.YjRate = 3;
-rDetialTable.ZjSyRate = 4;
-rDetialTable.ZjKsRate = 5;
-rDetialTable.YjSyRate = 6;
-rDetialTable.FHRate = 7;
-rDetialTable.FcRate = 8;
-rDetialTable.HbRate = 9;
-rDetialTable.numOfInstance = 9;
+    rDetialTable.ZYRate = 1;
+    rDetialTable.ZjRate = 2;
+    rDetialTable.YjRate = 3;
+    rDetialTable.ZjSyRate = 4;
+    rDetialTable.ZjKsRate = 5;
+    rDetialTable.YjSyRate = 6;
+    rDetialTable.FHRate = 7;
+    rDetialTable.FcRate = 8;
+    rDetialTable.HbRate = 9;
+    rDetialTable.numOfInstance = 9;
 
 %%%%%%%%%%%%%%%%%%%%%%%分级基金套利率表头配置%%%%%%%%%%%%%%%%%%
-rateTable.date = 1;
-rateTable.of = [];
+    rateTable.date = 1;
+    rateTable.of = [];
