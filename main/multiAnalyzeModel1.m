@@ -211,7 +211,11 @@ for year = bgtyear:edtyear
             RateRow = RateRow - 1;
             continue;
         end
-
+        
+        if( date == 41904 )
+            ppp = 1;
+        end
+        
         if ~isempty(yjEDay)
             for j = 1:size(yjEDay,2);
                 item = yjEDay(j);
@@ -277,6 +281,8 @@ for year = bgtyear:edtyear
         dailyRes(resultTable.zsRate) = zsHsClose / zsHsBgt; 
         dailyRes(resultTable.vilidVar) = assetManager2.typeNums;
         dailyRes(resultTable.validMoney) = assetManager2.validMoney;
+        dailyRes(resultTable.regVar) = dailyRes(resultTable.regVar)/assetManager2.typeNums;            %必须每天标准化
+        
         Result(ResultRowCnt,:) = dailyRes;
         Result(ResultRowCnt,resultTable.accVar ) = Result(ResultRowCnt-1,resultTable.accVar )+Result(ResultRowCnt,resultTable.accVar );       
         ResultRowCnt= ResultRowCnt+1;
@@ -284,7 +290,7 @@ for year = bgtyear:edtyear
         assetManager2.updateState();      %每日交易结束，模拟证券公司操作，更新资产状态
     %     end
     end   
-    Result(:,resultTable.regVar ) = Result(:,resultTable.regVar )./repmat( Result(:,resultTable.vilidVar), 1, length(resultTable.regVar));
+    %Result(:,resultTable.regVar ) = Result(:,resultTable.regVar )./repmat( Result(:,resultTable.vilidVar), 1, length(resultTable.regVar));
     Result(:,resultTable.tlRate) = Result(:,resultTable.yjRate) + Result(:,resultTable.zjRate); %totalTlRate = yjRate + zjRate; 总的套利率等于溢价套利率加上折价套利率 
     Result(:,resultTable.opNum) = Result(:,resultTable.yjNum) + Result(:,resultTable.zjNum);    %opNum = yjNums + zjNums;       总的套利次数等于溢价套利次数加上折价套利次数
     Result(1,:) = []; %删除第一行
@@ -337,16 +343,6 @@ for year = bgtyear:edtyear
     plot(x,Result(:,resultTable.yjRateLeft)+1,'c');
     legend('套利净值', '沪深300', '资金总净值', '折价套利剩余空间', '二倍折价额外收益', '二倍折价溢价减益', -1);
 
-    % subplot(212);
-    % plot(x,Result(:,resultTable.vilidVar), 'b');
-    % datetick('x',28);
-    % axis([xmin xmax -1, 5]);
-    % plot(x,Result(:,resultTable.opNum)+2, 'k.');
-    % plot(x,Result(:,resultTable.yjNum)+1, 'y.');
-    % plot(x,Result(:,resultTable.zjNum)-1, 'g.');
-    % plot(x,Result(:,resultTable.nomoneyNum), 'r.');
-    % yLable('品种数');
-    % legend('总持仓', '当日套利', '溢价套利', '折价套利', '资金不足无法折价', -1);
 
     configFile = 'config';
     saveDir = ['..\result\折溢价率\' configFile '_' num2str(slipRatio) '倍滑点_持仓比' num2str(handleRate(1)) '-' num2str(handleRate(2))];
