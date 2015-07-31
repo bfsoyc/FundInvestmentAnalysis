@@ -171,10 +171,7 @@ for year = bgtyear:edtyear
             changeB = closePriceB/openPriceB - 1;
 
             if disRate > 0 %溢价先存起来
-                if changeA < -0.0995 || changeB < -0.0995
-                    disp([num2str(date) ' ' num2str(Src{i}.name) ' A或B跌停']);
-                    continue;
-                end
+
                 pre.rate = disRate;
                 pre.pos = i;
                 pre.cost = muData(muDailyTable.netValue)*(1+Src{i}.applyFee);
@@ -182,6 +179,18 @@ for year = bgtyear:edtyear
                 % 收益的计算，由卖出子基金A，B获得： sy = （子基金A，B总市值）*（1-股票交易手续费-滑点率*滑点比率）
                 % ！！！！！！！！！！！滑点率不应该提现在母基金上吗？
                 pre.syRate = (pre.sy-pre.cost)/pre.cost * assetManager2.CcRate();
+                
+                if changeA < -0.0995 || changeB < -0.0995
+                    disp([num2str(date) ' ' num2str(Src{i}.name) ' A或B跌停']);
+                    if changeA < -0.0995
+                        resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = pre.syRate;
+                    end
+                    if changeB < -0.0995
+                        resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = pre.syRate;
+                    end
+                    
+                    continue;
+                end               
                 yjEDay = [yjEDay pre];
                 resDetial( rDetialTable.ZYRate , RateRow, rateTable.date+i) = disRate;      %只要溢价就存ZYRate
                 if disRate > Src{i}.YjThresholds
@@ -283,13 +292,11 @@ for year = bgtyear:edtyear
         dailyRes(resultTable.regVar) = dailyRes(resultTable.regVar)/assetManager2.typeNums;            %必须每天标准化
         
         Result(ResultRowCnt,:) = dailyRes;
-        Result(ResultRowCnt,resultTable.accVar ) = Result(ResultRowCnt-1,resultTable.accVar )+Result(ResultRowCnt,resultTable.accVar );       
+        Result(ResultRowCnt,resultTable.cumVar ) = Result(ResultRowCnt-1,resultTable.cumVar )+Result(ResultRowCnt,resultTable.cumVar );       
         ResultRowCnt= ResultRowCnt+1;
         
         assetManager2.updateState();      %每日交易结束，模拟证券公司操作，更新资产状态
-    %     end
-    end   
-    %Result(:,resultTable.regVar ) = Result(:,resultTable.regVar )./repmat( Result(:,resultTable.vilidVar), 1, length(resultTable.regVar));
+    end    
     Result(:,resultTable.tlRate) = Result(:,resultTable.yjRate) + Result(:,resultTable.zjRate); %totalTlRate = yjRate + zjRate; 总的套利率等于溢价套利率加上折价套利率 
     Result(:,resultTable.opNum) = Result(:,resultTable.yjNum) + Result(:,resultTable.zjNum);    %opNum = yjNums + zjNums;       总的套利次数等于溢价套利次数加上折价套利次数
     Result(1,:) = []; %删除第一行
