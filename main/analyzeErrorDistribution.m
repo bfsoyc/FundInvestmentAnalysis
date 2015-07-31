@@ -12,7 +12,7 @@ function analyzeErrorDistribution()
 
 %% 变量设置
     root = '..\result';
-    year = 2014;    % 按年统计才有意义;
+    year = 2015;    % 按年统计才有意义;
     filterD = [year 01 06; year 12 31]; %设置开始与结束的年月日
     begD = getIntDay(filterD(1, :));
     endD = getIntDay(filterD(2, :));
@@ -114,14 +114,17 @@ function analyzeErrorDistribution()
                         resTable(i,estimate.thrFlag) = 1;
                     end
                 end
-
+                
+                resTable(i,estimate.predict) = calValue; 
+                resTable(i,estimate.realNetValue) = value;
+                resTable(i,estimate.eps) = calValue-value;
                 resTable(i,estimate.disRate) = disRate;
-                resTable(i,estimate.epsPrecent) = (calValue-value)/value;
+                resTable(i,estimate.epsPercent) = (calValue-value)/value;
             end
 
             lastValue = value;
         end
-        resTable( resTable(:,estimate.epsPrecent)== 0,: ) = [];
+        resTable( resTable(:,estimate.epsPercent)== 0,: ) = [];
         
         % 画全部日期的误差分布 
             figure1=figure();
@@ -131,17 +134,17 @@ function analyzeErrorDistribution()
             yjEps = resTable( resTable(:,estimate.zjFlag)==0,:);
             totalEps = [zjEps;yjEps];
 
-            xMin = min(totalEps(:,estimate.epsPrecent));
-            xMax = max(totalEps(:,estimate.epsPrecent));
+            xMin = min(totalEps(:,estimate.epsPercent));
+            xMax = max(totalEps(:,estimate.epsPercent));
             x = xMin:(xMax-xMin)/100:xMax;
             if length(x) < 1    % 居然没有误差？或者说没有数据
                 close(figure1);
                 continue;
             end          
             % 画概率密度分布
-            f1 = ksdensity(totalEps(:,estimate.epsPrecent), x);   % 总的            
-            f2 = ksdensity(zjEps(:,estimate.epsPrecent), x);      % 折价的
-            f3 = ksdensity(yjEps(:,estimate.epsPrecent), x);      % 溢价的
+            f1 = ksdensity(totalEps(:,estimate.epsPercent), x);   % 总的            
+            f2 = ksdensity(zjEps(:,estimate.epsPercent), x);      % 折价的
+            f3 = ksdensity(yjEps(:,estimate.epsPercent), x);      % 溢价的
             
             subplot(1,2,1);
             fTitle = {[muName '-' list2str(filterD(1,:))  list2str(filterD(2,:))];['全日期范围误差概率分布']};
@@ -152,26 +155,26 @@ function analyzeErrorDistribution()
             plot(x,f3,'g');
             legend('全部日期范围', '折价日期范围', '溢价日期范围');
             % 打印变量作图
-            Mean = mean(totalEps(:,estimate.epsPrecent));
-            Variance1 = var(totalEps(:,estimate.epsPrecent));
-            Standard1 = std(totalEps(:,estimate.epsPrecent));
+            Mean = mean(totalEps(:,estimate.epsPercent));
+            Variance1 = var(totalEps(:,estimate.epsPercent));
+            Standard1 = std(totalEps(:,estimate.epsPercent));
             YRange = get(gca,'Ylim'); %y轴范围
             maxY = YRange(2);
             text(Mean, maxY * 0.96, ['\fontsize{8}\color{blue}Sample = ' num2str(size(totalEps,1))]);
             text(Mean, maxY * 0.88, ['\fontsize{8}\color{blue}Mean = ' num2str(Mean)]);
             text(Mean, maxY * 0.80, ['\fontsize{8}\color{blue}Variance = ' num2str(Variance1)]);
             text(Mean, maxY * 0.72, ['\fontsize{8}\color{blue}Standard = ' num2str(Standard1)]);
-            Mean2 = mean(zjEps(:,estimate.epsPrecent));
-            Variance2 = var(zjEps(:,estimate.epsPrecent));
-            Standard2 = std(zjEps(:,estimate.epsPrecent));
+            Mean2 = mean(zjEps(:,estimate.epsPercent));
+            Variance2 = var(zjEps(:,estimate.epsPercent));
+            Standard2 = std(zjEps(:,estimate.epsPercent));
             %maxY = max(f2);
             text(Mean2, maxY * 0.64, ['\fontsize{8}\color{red}Sample = ' num2str((size(zjEps,1)))]);
             text(Mean2, maxY * 0.56, ['\fontsize{8}\color{red}Mean = ' num2str(Mean2)]);
             text(Mean2, maxY * 0.48, ['\fontsize{8}\color{red}Variance = ' num2str(Variance2)]);
             text(Mean2, maxY * 0.40, ['\fontsize{8}\color{red}Standard = ' num2str(Standard2)]);  
-            Mean3 = mean(yjEps(:,estimate.epsPrecent));
-            Variance3 = var(yjEps(:,estimate.epsPrecent));
-            Standard3 = std(yjEps(:,estimate.epsPrecent));
+            Mean3 = mean(yjEps(:,estimate.epsPercent));
+            Variance3 = var(yjEps(:,estimate.epsPercent));
+            Standard3 = std(yjEps(:,estimate.epsPercent));
             %maxY = max(f2);
             text(Mean3, maxY * 0.32, ['\fontsize{8}\color{green}Sample = ' num2str((size(yjEps,1)))]);
             text(Mean3, maxY * 0.24, ['\fontsize{8}\color{green}Mean = ' num2str(Mean3)]);
@@ -184,17 +187,17 @@ function analyzeErrorDistribution()
             zjEpsThr = zyEpsThr( zyEpsThr(:,estimate.zjFlag)==1,:);
             yjEpsThr = zyEpsThr( zyEpsThr(:,estimate.zjFlag)==0,:);
             
-            xMin = min(zyEpsThr(:,2));
-            xMax = max(zyEpsThr(:,2));
+            xMin = min(zyEpsThr(:,estimate.epsPrecent));
+            xMax = max(zyEpsThr(:,estimate.epsPrecent));
             x = xMin:(xMax-xMin)/100:xMax;
             if length(x) < 1    % 居然没有误差？或者说没有数据
                 close(figure1);
                 continue;
             end          
             % 画概率密度分布
-            f1 = ksdensity(zyEpsThr(:,estimate.epsPrecent), x);   % 总的            
-            f2 = ksdensity(zjEpsThr(:,estimate.epsPrecent), x);      % 折价的
-            f3 = ksdensity(yjEpsThr(:,estimate.epsPrecent), x);      % 溢价的
+            f1 = ksdensity(zyEpsThr(:,estimate.epsPercent), x);   % 总的            
+            f2 = ksdensity(zjEpsThr(:,estimate.epsPercent), x);      % 折价的
+            f3 = ksdensity(yjEpsThr(:,estimate.epsPercent), x);      % 溢价的
             
             subplot(1,2,2);
             fTitle = {[muName '-' list2str(filterD(1,:))  list2str(filterD(2,:))];['预测有盈利的日期范围误差概率分布']};
@@ -205,26 +208,26 @@ function analyzeErrorDistribution()
             plot(x,f3,'g');
             legend('全部日期范围', '折价日期范围', '溢价日期范围');
             % 打印变量作图
-            Mean = mean(zyEpsThr(:,estimate.epsPrecent));
-            Variance1 = var(zyEpsThr(:,estimate.epsPrecent));
-            Standard1 = std(zyEpsThr(:,estimate.epsPrecent));
+            Mean = mean(zyEpsThr(:,estimate.epsPercent));
+            Variance1 = var(zyEpsThr(:,estimate.epsPercent));
+            Standard1 = std(zyEpsThr(:,estimate.epsPercent));
             YRange = get(gca,'Ylim'); %y轴范围
             maxY = YRange(2);
             text(Mean, maxY * 0.96, ['\fontsize{8}\color{blue}Sample = ' num2str(size(zyEpsThr,1))]);
             text(Mean, maxY * 0.88, ['\fontsize{8}\color{blue}Mean = ' num2str(Mean)]);
             text(Mean, maxY * 0.80, ['\fontsize{8}\color{blue}Variance = ' num2str(Variance1)]);
             text(Mean, maxY * 0.72, ['\fontsize{8}\color{blue}Standard = ' num2str(Standard1)]);
-            Mean2 = mean(zjEpsThr(:,estimate.epsPrecent));
-            Variance2 = var(zjEpsThr(:,estimate.epsPrecent));
-            Standard2 = std(zjEpsThr(:,estimate.epsPrecent));
+            Mean2 = mean(zjEpsThr(:,estimate.epsPercent));
+            Variance2 = var(zjEpsThr(:,estimate.epsPercent));
+            Standard2 = std(zjEpsThr(:,estimate.epsPercent));
             %maxY = max(f2);
             text(Mean2, maxY * 0.64, ['\fontsize{8}\color{red}Sample = ' num2str((size(zjEpsThr,1)))]);
             text(Mean2, maxY * 0.56, ['\fontsize{8}\color{red}Mean = ' num2str(Mean2)]);
             text(Mean2, maxY * 0.48, ['\fontsize{8}\color{red}Variance = ' num2str(Variance2)]);
             text(Mean2, maxY * 0.40, ['\fontsize{8}\color{red}Standard = ' num2str(Standard2)]);  
-            Mean3 = mean(yjEpsThr(:,estimate.epsPrecent));
-            Variance3 = var(yjEpsThr(:,estimate.epsPrecent));
-            Standard3 = std(yjEpsThr(:,estimate.epsPrecent));
+            Mean3 = mean(yjEpsThr(:,estimate.epsPercent));
+            Variance3 = var(yjEpsThr(:,estimate.epsPercent));
+            Standard3 = std(yjEpsThr(:,estimate.epsPercent));
             %maxY = max(f2);
             text(Mean3, maxY * 0.32, ['\fontsize{8}\color{green}Sample = ' num2str((size(yjEpsThr,1)))]);
             text(Mean3, maxY * 0.24, ['\fontsize{8}\color{green}Mean = ' num2str(Mean3)]);
@@ -234,14 +237,18 @@ function analyzeErrorDistribution()
             
             figurePath = [root_dir '\' fTitle{1} '.bmp'];
             
-            saveas( gcf, figurePath );
+            %saveas( gcf, figurePath );
             hold off;
             close(figure1);
 
         % save resTable
-        save_path = [save_dir fTitle{1} '.csv'];
-
-        csvwrite( save_path, resTable );
+        fTitle{1} = strrep( fTitle{1},'.','-');   
+        save_path = [save_dir fTitle{1} ];
+        sheet = 1;   
+        xlswrite( save_path, estimate.listHeader, sheet);   % 确保文件名中不存在字符'.'
+        startE = 'A2';
+        xlswrite( save_path, resTable, sheet, startE);
+        %csvwrite( save_path, resTable );
     end
     meanTable(1,:) = [];
     listHeader = {'基金代码', '全部日期误差均值','折价日期误差均值','溢价日期误差均值','预计盈利日期误差均值','预计折价盈利日期误差均值','预计溢价盈利日期误差均值' };

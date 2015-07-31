@@ -11,10 +11,15 @@ global statList;
 global estimate;
 %%%%%%%%%%%%%%%% 误差估计表头 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     estimate.muCode = 1;
-    estimate.epsPrecent = 2;
-    estimate.disRate = 3;
-    estimate.zjFlag = 4;
-    estimate.thrFlag = 5;
+    estimate.eps = 2;
+    estimate.predict = 3;
+    estimate.realNetValue = 4;
+    estimate.epsPercent = 5;
+    estimate.disRate = 6;
+    estimate.zjFlag = 7;
+    estimate.thrFlag = 8;
+    % 需要保存的数据表头（请按照上述顺序)
+    estimate.listHeader = {'母基金代码','误差','预测净值','真实净值','误差百分比','折溢价率','折价标志','超过阈值标志'};
 %%%%%%%%%%%%%%%%需要统计的基金列表表头%%%%%%%%%%%%%%%%%%%%%%
     statList.muName = 1;
     statList.zsName = 3;
@@ -83,13 +88,18 @@ global estimate;
     resultTable.yjRate = 13;
     resultTable.zjRateFail = 14;        %昨日溢价导致今日无法折价
     resultTable.validMoney = 15;
-    resultTable.numOfInstance = 15;     %该变量记录result表格的列数
+    resultTable.tradeLimitLeft = 16;    % 因为涨跌停导致的剩余价值
+    resultTable.numOfInstance = 16;     %该变量记录result表格的列数
+    
+    resultTable.listHeader = {'日期','累计总套利率','zsRate','当前品总数','操作数','溢价操作数','折价操作数','资金缺乏数',...
+        '累计套利率剩余价值','二倍折价套利额外收益','二倍折价套利溢价减益','折价套利率','溢价套利率','折价Fail',...
+        '现金数','涨跌停剩余价值'};
     %记录所有累加的变量cumulative variable :非直接统计量不放在下表，如opNum
-    resultTable.cumVar = [ resultTable.yjRate resultTable.zjRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail ]; 
+    resultTable.cumVar = [ resultTable.yjRate resultTable.zjRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail resultTable.tradeLimitLeft ]; 
     %记录所有需要标准化的变量（即除以assetManager2.typeNums） regularization variable;
-    resultTable.regVar = [ resultTable.yjRate resultTable.zjRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail  ];
+    resultTable.regVar = [ resultTable.yjRate resultTable.zjRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail resultTable.tradeLimitLeft ];
     %记录所有需要计算年化以及日均值的变量 transform variable
-    resultTable.transVar = [ resultTable.yjRate resultTable.zjRate resultTable.tlRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail ]; 
+    resultTable.transVar = [ resultTable.yjRate resultTable.zjRate resultTable.tlRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail resultTable.tradeLimitLeft ]; 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     rDetialTable.ZYRate = 1;

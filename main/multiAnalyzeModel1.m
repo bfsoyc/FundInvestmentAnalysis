@@ -22,7 +22,7 @@ zjType = 2;     %折价类型 一倍，两倍……
 slipRatio = 0;  %N倍滑点率，0时代表不考虑滑点
 
 [selectFund,weight] = getSelectionFund();
-selectMode = 0;
+selectMode = 1;
 
 %%  读取数据
 config = readcsv2('\config.csv', 12);
@@ -169,7 +169,7 @@ for year = bgtyear:edtyear
             end
             changeA = closePriceA/openPriceA - 1;
             changeB = closePriceB/openPriceB - 1;
-
+            
             if disRate > 0 %溢价先存起来
 
                 pre.rate = disRate;
@@ -182,13 +182,8 @@ for year = bgtyear:edtyear
                 
                 if changeA < -0.0995 || changeB < -0.0995
                     disp([num2str(date) ' ' num2str(Src{i}.name) ' A或B跌停']);
-                    if changeA < -0.0995
-                        resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = pre.syRate;
-                    end
-                    if changeB < -0.0995
-                        resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = pre.syRate;
-                    end
-                    
+                    resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = pre.syRate; 
+                    dailyRes( resultTable.tradeLimitLeft ) = dailyRes( resultTable.tradeLimitLeft ) + pre.syRate;
                     continue;
                 end               
                 yjEDay = [yjEDay pre];
@@ -197,16 +192,20 @@ for year = bgtyear:edtyear
                     resDetial( rDetialTable.YjRate , RateRow, rateTable.date+i) = disRate;  %只有大于阈值，可套利才存YjRate
                 end
             elseif disRate < Src{i}.ZjThresholds  %折价先保存，排序后再做
-                if changeA > 0.0995 || changeB > 0.0995
-                    disp([num2str(date) ' ' num2str(Src{i}.name) ' A或B涨停']);
-                    continue;
-                end
+                
                 dis.rate = disRate;
                 dis.rate_mins_thr = dis.rate - Src{i}.ZjThresholds;
                 dis.pos = i;
                 dis.cost = (fjAData(fjDailyTable.closingPrice)*Src{i}.aShare+fjBData(fjDailyTable.closingPrice)*Src{i}.bShare)*(1+Src{i}.stockFee+Src{i}.slipRate*slipRatio);
                 dis.sy = muData(muDailyTable.netValue)*(1-Src{i}.redeemFee);
                 dis.syRate = (dis.sy-dis.cost)/dis.cost * assetManager2.CcRate();
+                if changeA > 0.0995 || changeB > 0.0995
+                    disp([num2str(date) ' ' num2str(Src{i}.name) ' A或B涨停']);
+                    resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = dis.syRate;  
+                    dailyRes( resultTable.tradeLimitLeft ) = dailyRes( resultTable.tradeLimitLeft ) + dis.syRate;
+                    continue;
+                end
+                
                 disEDay = [disEDay dis];
                 resDetial( rDetialTable.ZYRate , RateRow, rateTable.date+i) = disRate;      %只有大于阈值，可套利才存ZYRate
                 resDetial( rDetialTable.ZjRate , RateRow, rateTable.date+i) = disRate;
@@ -218,11 +217,7 @@ for year = bgtyear:edtyear
         if isTrade ~= 1 %有数据则表明是交易日,不是交易日则跳过
             RateRow = RateRow - 1;
             continue;
-        end
-        
-        if( date == 41904 )
-            ppp = 1;
-        end
+        end       
         
         if ~isempty(yjEDay)
             for j = 1:size(yjEDay,2);
@@ -342,16 +337,21 @@ for year = bgtyear:edtyear
     text(xmin+10,ymax-inner*7,['折价剩余总收益率：' num2str(result(resultTable.zjRateLeft)) '%    折价剩余年化收益率：' num2str(resultY(resultTable.zjRateLeft)) '%'],'FontSize',10);
     text(xmin+10,ymax-inner*8,['溢价剩余总收益率：' num2str(result(resultTable.yjRateLeft)) '%    溢价剩余年化收益率：' num2str(resultY(resultTable.yjRateLeft)) '%'],'FontSize',10);
     text(xmin+10,ymax-inner*9,['溢价浪费总收益率：' num2str(result(resultTable.zjRateFail)) '%    溢价浪费年化收益率：' num2str(resultY(resultTable.zjRateFail)) '%'],'FontSize',10);
+    text(xmin+10,ymax-inner*9.5,['涨跌停剩余总收益率：' num2str(result(resultTable.tradeLimitLeft)) '%    溢价浪费年化收益率：' num2str(resultY(resultTable.tradeLimitLeft)) '%'],'FontSize',10);
     plot(x,Result(:,resultTable.zsRate),'g');
     plot(x,Result(:,resultTable.tlRate) + Result(:,resultTable.zsRate),'b');
     plot(x,Result(:,resultTable.zjRateLeft)+1,'k');
     plot(x,Result(:,resultTable.zjRatePlus)+1,'y');
     plot(x,Result(:,resultTable.yjRateLeft)+1,'c');
-    legend('套利净值', '沪深300', '资金总净值', '折价套利剩余空间', '二倍折价额外收益', '二倍折价溢价减益', -1);
+    plot(x,Result(:,resultTable.tradeLimitLeft)+1,'m');
+    legend('套利净值', '沪深300', '资金总净值', '折价套利剩余空间', '二倍折价额外收益', '二倍折价溢价减益','涨跌停剩余收益率', -1);
 
 
     configFile = 'config';
     saveDir = ['..\result\折溢价率\' configFile '_' num2str(slipRatio) '倍滑点_持仓比' num2str(handleRate(1)) '-' num2str(handleRate(2))];
+    if (selectMode == 1)
+        saveDir = [saveDir '选择品种'];
+    end
     if exist(saveDir,'dir') == 0
         mkdir(saveDir);
     end
@@ -360,7 +360,13 @@ for year = bgtyear:edtyear
     saveas( gcf, figurePath );
     %RD = resDetial( rDetialTable.ZYRate,:,:);
     %RD = squeeze(RD);
-    csvwrite([saveDir '\' num2str(year) 'Result.csv'], Result );
+    save_path = [saveDir '\' num2str(year) 'Result'];
+    sheet = 1;   
+    xlswrite( save_path, resultTable.listHeader, sheet);   % 确保文件名中不存在字符'.'
+    startE = 'A2';
+    xlswrite( save_path, Result, sheet, startE);
+    %csvwrite([saveDir '\' num2str(year) 'Result.csv'], Result );
+    
     csvwrite([saveDir '\' num2str(year) '折溢价率.csv'], squeeze(resDetial( rDetialTable.ZYRate,:,:)) );
     csvwrite([saveDir '\' num2str(year) '折价率.csv'], squeeze(resDetial( rDetialTable.ZjRate,:,:)));
     csvwrite([saveDir '\' num2str(year) '溢价率.csv'], squeeze(resDetial( rDetialTable.YjRate,:,:)));
@@ -370,6 +376,7 @@ for year = bgtyear:edtyear
     csvwrite([saveDir '\' num2str(year) '分拆合并折溢价率.csv'], squeeze(resDetial( rDetialTable.FHRate,:,:)));
     csvwrite([saveDir '\' num2str(year) '分拆溢价率.csv'], squeeze(resDetial( rDetialTable.FcRate,:,:)));
     csvwrite([saveDir '\' num2str(year) '合并折价率.csv'], squeeze(resDetial( rDetialTable.HbRate,:,:)));
+    csvwrite([saveDir '\' num2str(year) '涨跌停时预计收益率.csv'], squeeze(resDetial( rDetialTable.TradeLimit,:,:)));
 
 end
 end
