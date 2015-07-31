@@ -16,7 +16,6 @@ bgtyear = 2013;
 edtyear = 2015;
 init2();
 global resultTable fjDailyTable rateTable configTable muDailyTable idxDailyTable rDetialTable statList;
-fjDailyTable.closingPrice = 2;
 
 handleRate = [2 3];%2/3、2/4持仓
 zjType = 2;     %折价类型 一倍，两倍……

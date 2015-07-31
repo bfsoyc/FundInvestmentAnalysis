@@ -52,10 +52,10 @@ global statList;
 
 %%%%%%%%%%%%%%%%%%%%分级基金日线表头配置%%%%%%%%%%%%%%%%%%%%%%%%%
     fjDailyTable.date = 1;              %时间
-    fjDailyTable.openingPrice = 2;      %开盘价
+   % fjDailyTable.openingPrice = 2;      %开盘价
     fjDailyTable.highPrice = 3;         %最高价
     fjDailyTable.lowPrice = 4;          %最低价
-    fjDailyTable.closingPrice = 5;      %收盘价
+    fjDailyTable.closingPrice = 2;      %收盘价
 %%%%%%%%%%%%%%%%%%%%%%指数日线表头配置%%%%%%%%%%%%%%%%%%%%%%
     idxDailyTable.date = 1;          %日期
     idxDailyTable.netValue = 2;     

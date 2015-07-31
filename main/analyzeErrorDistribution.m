@@ -17,14 +17,16 @@ function analyzeErrorDistribution()
     endD = getIntDay(filterD(2, :));
     % 设置保存目录
     root_dir = [root '\预估净值分布'];
-    if exist(root_dir,'dir') == 0
+    if ~exist(root_dir,'dir')
         disp(['mkdir ' root_dir]);
         mkdir(root_dir);
     end
-
+    save_dir = [ '..\result\estimateResult\'];
+    if ~exist(save_dir,'dir')
+        mkdir( save_dir );
+    end
     init2();
     global statList fjDailyTable;
-
 %% 分析
     % 读配置文件(存储需要分析的基金信息)
     T = readcsv2('\config.csv', 12);   
@@ -80,6 +82,7 @@ function analyzeErrorDistribution()
             iIndex = find(iChangeRange(:,1)==day);
 
             if ( isempty(fjAIdx) || isempty(fjBIdx) || isempty(iIndex) )
+                % 检查是否缺数据
                 continue;
             end
 
@@ -223,11 +226,10 @@ function analyzeErrorDistribution()
             figurePath = [root_dir '\' fTitle{1} '.bmp'];
             
             saveas( gcf, figurePath );
+            hold off;
             close(figure1);
 
         % save resTable
-        save_dir = [ '..\result\estimateResult\'];
-        mkdir( save_dir );
         save_path = [save_dir fTitle{1} '.csv'];
 
         csvwrite( save_path, resTable );
