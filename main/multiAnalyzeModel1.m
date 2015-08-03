@@ -5,33 +5,39 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function multiAnalyzeModel1()
 %% 添加工程目录
-Files = dir(fullfile( '..\','*.*'));
-for i = 1:length(Files)
-    if( Files(i).isdir )
-        addpath( ['..\' Files(i).name ])
+    Files = dir(fullfile( '..\','*.*'));
+    for i = 1:length(Files)
+        if( Files(i).isdir )
+            addpath( ['..\' Files(i).name ])
+        end
     end
-end
+    
 %% 变量设置
-bgtyear = 2013;
-edtyear = 2015;
-init2();
-global resultTable fjDailyTable rateTable configTable muDailyTable idxDailyTable rDetialTable statList;
+    bgtyear = 2014;
+    edtyear = 2014;
+    init2();
+    global resultTable fjDailyTable rateTable configTable muDailyTable idxDailyTable rDetialTable statList;
 
-handleRate = [2 3];%2/3、2/4持仓
-zjType = 2;     %折价类型 一倍，两倍……
-slipRatio = 0;  %N倍滑点率，0时代表不考虑滑点
+    handleRate = [2 4];%2/3、2/4持仓
+    zjType =2;     %折价类型 一倍，两倍……
+    slipRatio = 0;  %N倍滑点率，0时代表不考虑滑点
+    configFile = '\config滤流动性.csv';
 
-[selectFund,weight] = getSelectionFund();
-selectMode = 1;
+
+    [selectFund,weight] = getSelectionFund();
+    selectMode = 0;
 
 %%  读取数据
-config = readcsv2('\config.csv', 12);
+config = readcsv2(configFile, 12);   %
 zsHs300 = csvread('G:\datastore\日线1\SZ399300.csv');
 tableLen = length(config{1});    
 Src = cell(1,tableLen);
 for k = 2:tableLen     %第一行是表头
     
     muName = config{statList.muName}{k};
+    if( length(muName) < 8 )
+        muName = ['OF' muName];
+    end
     % 检查该基金是否要操作
     muCode = str2num(muName(3:end));
     if( selectMode == 1)
@@ -42,8 +48,17 @@ for k = 2:tableLen     %第一行是表头
     end
     
     fjAName = config{statList.fjAName}{k};      %子基金A名：深交所的以SZ开头
+    if( length(fjAName) < 8 )
+        fjAName = ['SZ' fjAName];
+    end
     fjBName = config{statList.fjBName}{k};
+    if( length(fjBName) < 8 )
+        fjBName = ['SZ' fjBName];
+    end
     zsName = config{statList.zsName}{k};
+    if( length(zsName) < 8 )
+        zsName = ['SZ' zsName];
+    end
     try
         %读取母基金，其分级基金A、B，以及对应指数的相关数据：每日净值、涨幅等等
         temp.muData = csvread(['G:\datastore\母基金1\' muName,'.csv']);

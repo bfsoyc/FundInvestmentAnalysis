@@ -18,6 +18,7 @@ global estimate;
     estimate.disRate = 6;
     estimate.zjFlag = 7;
     estimate.thrFlag = 8;
+    estimate.numOfInstance = 8;
     % 需要保存的数据表头（请按照上述顺序)
     estimate.listHeader = {'母基金代码','误差','预测净值','真实净值','误差百分比','折溢价率','折价标志','超过阈值标志'};
 %%%%%%%%%%%%%%%%需要统计的基金列表表头%%%%%%%%%%%%%%%%%%%%%%

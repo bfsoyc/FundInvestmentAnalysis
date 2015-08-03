@@ -12,52 +12,56 @@ function analyzeErrorDistribution()
 
 %% 变量设置
     root = '..\result';
-    year = 2015;    % 按年统计才有意义;
+    configFile = '\config滤流动性.csv'; %滤流动性副本
+    year = 2013;    % 按年统计才有意义;
     filterD = [year 01 06; year 12 31]; %设置开始与结束的年月日
     begD = getIntDay(filterD(1, :));
     endD = getIntDay(filterD(2, :));
     % 设置保存目录
-    root_dir = [root '\预估净值分布'];
-    if ~exist(root_dir,'dir')
-        disp(['mkdir ' root_dir]);
-        mkdir(root_dir);
-    end
-    save_dir = [ '..\result\estimateResult\'];
+    save_dir = [ root '\estimateResult' configFile(1:end-4) '\' num2str(year)];
     if ~exist(save_dir,'dir')
         mkdir( save_dir );
     end
     init2();
     global statList fjDailyTable estimate;
+    
 %% 分析
     % 读配置文件(存储需要分析的基金信息)
-    T = readcsv2('\config.csv', 12);   
-    num = size(T{:,1},1);
+    config = readcsv2(configFile, 12);   
+    tableLen = length(config{1});  
 
-    mi = 1;%母基金代码列号
-    ii = 3;%指数代码列号
-    mcs = T{mi};
-    ics = T{ii};
-
-    meanTable = zeros(num,7);   % 统计每个品种均值。
-    for index = 2:num
-        muName = mcs{index};
-        
+    meanTable = zeros(tableLen,7);   % 统计每个品种均值。
+    for k = 2:tableLen
+        muName = config{statList.muName}{k};
+        % 配置文件中基金代号不规范，可能不是完整的8位数，所以要多加判断
+        if( length(muName) < 8 )
+            muName = ['OF' muName];
+        end
         muCode = str2num(muName(3:end));
-        meanTable(index,1) = muCode;
-        
-        zsName = ics{index};
-        fjAName = T{statList.fjAName}{index};      %子基金A名：深交所的以SZ开头
-        fjBName = T{statList.fjBName}{index};
-        disp([num2str(index) ]);
+        meanTable(k,1) = muCode;
+               
+        fjAName = config{statList.fjAName}{k};      %子基金A名：深交所的以SZ开头
+        if( length(fjAName) < 8 )
+            fjAName = ['SZ' fjAName];
+        end
+        fjBName = config{statList.fjBName}{k};
+        if( length(fjBName) < 8 )
+            fjBName = ['SZ' fjBName];
+        end
+        zsName = config{statList.zsName}{k};
+        if( length(zsName) < 8 )
+            zsName = ['SZ' zsName];
+        end
+        disp([num2str(k) ]);
         try
             %读取母基金，其分级基金A、B，以及对应指数的相关数据：每日净值、涨幅等等
             mValues = csvread(['G:\datastore\母基金1\' muName '.csv']);
             fjAData = csvread(['G:\datastore\日线1\' fjAName '.csv']);
             fjBData = csvread(['G:\datastore\日线1\' fjBName '.csv']);
-            aShare = str2double(cell2mat( T{statList.aShare}(index) ))/10;   
-            bShare = str2double(cell2mat( T{statList.bShare}(index) ))/10;   
-            applyFee = str2double(cell2mat( T{statList.applyFee}(index) ));     
-            redeemFee = str2double(cell2mat( T{statList.redeemFee}(index) ));  
+            aShare = str2double(cell2mat( config{statList.aShare}(k) ))/10;   
+            bShare = str2double(cell2mat( config{statList.bShare}(k) ))/10;   
+            applyFee = str2double(cell2mat( config{statList.applyFee}(k) ));     
+            redeemFee = str2double(cell2mat( config{statList.redeemFee}(k) ));  
             YjThresholds = applyFee + 0.002;
             ZjThresholds = -redeemFee -0.002;
         catch ME
@@ -71,7 +75,7 @@ function analyzeErrorDistribution()
         iChangeRange = iChanges(iChanges(:,1)>=begD & iChanges(:,1)<endD,:);
 
         mNum = size(mValueRange,1);
-        resTable = zeros( mNum, 5);
+        resTable = zeros( mNum, estimate.numOfInstance);
         resTable(:,1) = mValueRange(:,1);   %复制日期列
 
         if mNum == 0
@@ -87,21 +91,22 @@ function analyzeErrorDistribution()
             fjBIdx = find( fjBData(:,fjDailyTable.date)==day);
             iIndex = find(iChangeRange(:,1)==day);
 
-            if ( isempty(fjAIdx) || isempty(fjBIdx) || isempty(iIndex) )
+            if ( isempty(fjAIdx) || isempty(fjBIdx) || isempty(iIndex) || iIndex == 1)
                 % 检查是否缺数据
                 continue;
             end
 
-            if (value-lastValue)/lastValue>0.4      %下折
+            if (value-lastValue)/lastValue>0.1      %下折
                 disp([muName ' 下折 ' num2str(value)]);
-            elseif (value-lastValue)/lastValue<-0.4   %上折
+            elseif (value-lastValue)/lastValue<-0.1   %上折
                 disp([muName ' 上折 ' num2str(value)]);
             else
-
-
-                change = iChangeRange(iIndex, 3);
+                
+                change = (iChangeRange(iIndex,2)-iChangeRange(iIndex-1,2))/iChangeRange(iIndex-1,2)*100;     %要乘以100
+                %change = iChangeRange(iIndex, 3);
 
                 calValue = getPreValue(lastValue, change);
+                
                 disRate = (fjAData(fjAIdx,fjDailyTable.closingPrice)*aShare+fjBData(fjBIdx,fjDailyTable.closingPrice)*bShare - calValue)/calValue;
 
                 if( disRate < 0 )   % 说明是折价
@@ -137,6 +142,7 @@ function analyzeErrorDistribution()
             xMin = min(totalEps(:,estimate.epsPercent));
             xMax = max(totalEps(:,estimate.epsPercent));
             x = xMin:(xMax-xMin)/100:xMax;
+            kk = length(x);
             if length(x) < 1    % 居然没有误差？或者说没有数据
                 close(figure1);
                 continue;
@@ -180,15 +186,15 @@ function analyzeErrorDistribution()
             text(Mean3, maxY * 0.24, ['\fontsize{8}\color{green}Mean = ' num2str(Mean3)]);
             text(Mean3, maxY * 0.16, ['\fontsize{8}\color{green}Variance = ' num2str(Variance3)]);
             text(Mean3, maxY * 0.08, ['\fontsize{8}\color{green}Standard = ' num2str(Standard3)]);  
-            meanTable(index,[2 3 4]) = [Mean, Mean2, Mean3];
+            meanTable(k,[2 3 4]) = [Mean, Mean2, Mean3];
             
         % 画有收益的日期的误差分布
             zyEpsThr = resTable( resTable(:,estimate.thrFlag)==1,:);
             zjEpsThr = zyEpsThr( zyEpsThr(:,estimate.zjFlag)==1,:);
             yjEpsThr = zyEpsThr( zyEpsThr(:,estimate.zjFlag)==0,:);
             
-            xMin = min(zyEpsThr(:,estimate.epsPrecent));
-            xMax = max(zyEpsThr(:,estimate.epsPrecent));
+            xMin = min(zyEpsThr(:,estimate.epsPercent));
+            xMax = max(zyEpsThr(:,estimate.epsPercent));
             x = xMin:(xMax-xMin)/100:xMax;
             if length(x) < 1    % 居然没有误差？或者说没有数据
                 close(figure1);
@@ -233,17 +239,17 @@ function analyzeErrorDistribution()
             text(Mean3, maxY * 0.24, ['\fontsize{8}\color{green}Mean = ' num2str(Mean3)]);
             text(Mean3, maxY * 0.16, ['\fontsize{8}\color{green}Variance = ' num2str(Variance3)]);
             text(Mean3, maxY * 0.08, ['\fontsize{8}\color{green}Standard = ' num2str(Standard3)]);   
-            meanTable(index, [5 6 7]) = [Mean, Mean2, Mean3];
+            meanTable(k, [5 6 7]) = [Mean, Mean2, Mean3];
             
-            figurePath = [root_dir '\' fTitle{1} '.bmp'];
+            figurePath = [save_dir '\' fTitle{1} '.bmp'];
             
-            %saveas( gcf, figurePath );
+            saveas( gcf, figurePath );
             hold off;
             close(figure1);
 
         % save resTable
         fTitle{1} = strrep( fTitle{1},'.','-');   
-        save_path = [save_dir fTitle{1} ];
+        save_path = [save_dir '\' fTitle{1} ];
         sheet = 1;   
         xlswrite( save_path, estimate.listHeader, sheet);   % 确保文件名中不存在字符'.'
         startE = 'A2';
@@ -252,7 +258,7 @@ function analyzeErrorDistribution()
     end
     meanTable(1,:) = [];
     listHeader = {'基金代码', '全部日期误差均值','折价日期误差均值','溢价日期误差均值','预计盈利日期误差均值','预计折价盈利日期误差均值','预计溢价盈利日期误差均值' };
-    filename = [save_dir  num2str(year) '年预估净值误差均值统计表' ];
+    filename = [save_dir  '\' num2str(year) '年预估净值误差均值统计表' ];
     sheet = 1;   
     xlswrite( filename, listHeader, sheet);
     startE = 'A2';
