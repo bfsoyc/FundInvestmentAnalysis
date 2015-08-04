@@ -40,7 +40,7 @@ function analyzeErrorDistribution()
     estiMode = bitor( estiMode, estimate.FundA_Mode );
     estiMode = bitor( estiMode, estimate.FundB_Mode );
     estiMode = bitor( estiMode, estimate.Index_Mode );
-    %estiMode = bitor( estiMode, estimate.Predict_Mode);
+    estiMode = bitor( estiMode, estimate.Predict_Mode);
     
 %% 分析
     % 读配置文件(存储需要分析的基金信息)
@@ -331,12 +331,14 @@ function analyzeErrorDistribution()
             close(figure1);
         end
         % save resTable
-%         fTitle{1} = strrep( fTitle{1},'.','-');   
-%         save_path = [save_dir '\' fTitle{1} ];
-%         sheet = 1;   
-%         xlswrite( save_path, estimate.listHeader, sheet);   % 请自行确保保存文件名中不存在字符'.'
-%         startE = 'A2';
-%         xlswrite( save_path, resTable, sheet, startE);
+        fTitle = [muName '-' list2str(filterD(1,:))  list2str(filterD(2,:))];
+        fTitle = strrep( fTitle,'.','-');
+        
+        save_path = [save_dir '\' fTitle ];
+        sheet = 1;   
+        xlswrite( save_path, estimate.listHeader, sheet);   % 请自行确保保存文件名中不存在字符'.'
+        startE = 'A2';
+        xlswrite( save_path, resTable, sheet, startE);
         %csvwrite( save_path, resTable );
         
         

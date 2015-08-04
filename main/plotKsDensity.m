@@ -16,13 +16,13 @@ function [status, meanVec, fTitle]  = plotKsDensity( src, src1, src2, filterD, n
             ss = '预估净值';
         case estimate.FundA_Mode
             estimateValue = estimate.FundAeps;
-            ss ='分级A预估收盘价';
+            ss ='分级A预估涨幅';
         case estimate.FundB_Mode
             estimateValue = estimate.FundBeps;
-            ss ='分级B预估收盘价';
+            ss ='分级B预估涨幅';
         case estimate.Index_Mode
             estimateValue = estimate.IndexEps;
-            ss ='指数预估收盘价';
+            ss ='指数预估涨幅';
     end    
     
     
