@@ -18,9 +18,23 @@ global estimate;
     estimate.disRate = 6;
     estimate.zjFlag = 7;
     estimate.thrFlag = 8;
-    estimate.numOfInstance = 8;
+    estimate.predAIncrease = 9;
+    estimate.FundAeps = 10;
+    estimate.predBIncrease = 11;
+    estimate.FundBeps = 12;
+    estimate.predIdxIncrease = 13;
+    estimate.IndexEps = 14;
+    
+    estimate.numOfInstance = 14;
     % 需要保存的数据表头（请按照上述顺序)
     estimate.listHeader = {'母基金代码','误差','预测净值','真实净值','误差百分比','折溢价率','折价标志','超过阈值标志'};
+    
+    % 常数定义
+    estimate.Predict_Mode = 1;  % 分析母基金的预测净值误差分布
+    estimate.Index_Mode = 2;    % 分析指数预测收盘价误差分布
+    estimate.FundA_Mode = 4;
+    estimate.FundB_Mode = 8;
+
 %%%%%%%%%%%%%%%%需要统计的基金列表表头%%%%%%%%%%%%%%%%%%%%%%
     statList.muName = 1;
     statList.zsName = 3;
@@ -65,9 +79,11 @@ global estimate;
 %%%%%%%%%%%%%%%%%%%%分级基金日线表头配置%%%%%%%%%%%%%%%%%%%%%%%%%
     fjDailyTable.date = 1;              %时间
    % fjDailyTable.openingPrice = 2;      %开盘价
-    fjDailyTable.highPrice = 3;         %最高价
+    fjDailyTable.increase = 3;
+    %fjDailyTable.highPrice = 3;         %最高价
     fjDailyTable.lowPrice = 4;          %最低价
     fjDailyTable.closingPrice = 2;      %收盘价
+    fjDailyTable.tradeAmount = 7;        %交易量
 %%%%%%%%%%%%%%%%%%%%%%指数日线表头配置%%%%%%%%%%%%%%%%%%%%%%
     idxDailyTable.date = 1;          %日期
     idxDailyTable.netValue = 2;     
