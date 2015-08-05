@@ -29,7 +29,7 @@ function analyzeErrorDistribution()
         mkdir( save_dir );
     end
     init2();
-    global statList fjDailyTable estimate;
+    global statList fjDailyTable estimate meanTHeader;
     
     configT = {1,'母基金分布',0; 3,'涨幅均差分布',0; 5,'分级A均差分布',2000000; 7,'分级B均差分布',10000000};
     IfilterAmount = configT{2,3};
@@ -47,7 +47,7 @@ function analyzeErrorDistribution()
     config = readcsv2(configFile, 12);   
     tableLen = length(config{1});  
 
-    meanTable = zeros(tableLen,7);   % 统计每个品种均值。
+    meanTable = zeros(tableLen,meanTHeader.numOfEntries);   % 统计每个品种均值。
     for k = 2:tableLen
         muName = config{statList.muName}{k};
         % 配置文件中基金代号不规范，可能不是完整的8位数，所以要多加判断
@@ -94,7 +94,7 @@ function analyzeErrorDistribution()
         iChangeRange = iChanges(iChanges(:,1)>=begD & iChanges(:,1)<endD,:);
 
         mNum = size(mValueRange,1);
-        resTable = zeros( mNum, estimate.numOfInstance);
+        resTable = zeros( mNum, estimate.numOfEntries);
         resTable(:,1) = mValueRange(:,1);   %复制日期列
 
         if mNum == 0
@@ -181,13 +181,11 @@ function analyzeErrorDistribution()
             yjEps = subResTalbe( subResTalbe(:,estimate.zjFlag)==0,:);
             totalEps = [zjEps;yjEps];  
             subplot(1,2,1);
-            [status, meanVec ] = plotKsDensity( totalEps, zjEps, yjEps, filterD, muName, estimate.Predict_Mode );
+            [status ] = plotKsDensity( totalEps, zjEps, yjEps, filterD, muName, estimate.Predict_Mode );
             if status == 0
                 close(figure1);
                 continue;
-            end
-            meanTable(k,[2 3 4]) = meanVec;
-            
+            end           
             % 画有收益的日期的误差分布
             zyEpsThr = subResTalbe( subResTalbe(:,estimate.thrFlag)==1,:);
             zjEpsThr = zyEpsThr( zyEpsThr(:,estimate.zjFlag)==1,:);
@@ -199,7 +197,7 @@ function analyzeErrorDistribution()
                 close(figure1);
                 continue;
             end
-            meanTable(k,[5 6 7]) = meanVec;
+            meanTable(k,meanTHeader.muMean) = meanVec;
             subDir = [save_dir '\母基金预测净值误差分布'];
             if ~exist(subDir,'dir')
                 mkdir( subDir );
@@ -221,13 +219,11 @@ function analyzeErrorDistribution()
             yjEps = subResTalbe( subResTalbe(:,estimate.zjFlag)==0,:);
             totalEps = [zjEps;yjEps];  
             subplot(1,2,1);
-            [status, meanVec ] = plotKsDensity( totalEps, zjEps, yjEps, filterD, zsName, estimate.Index_Mode );
+            [status ] = plotKsDensity( totalEps, zjEps, yjEps, filterD, zsName, estimate.Index_Mode );
             if status == 0
                 close(figure1);
                 continue;
-            end
-            meanTable(k,[2 3 4]) = meanVec;
-            
+            end           
             % 画有收益的日期的误差分布
             zyEpsThr = subResTalbe( subResTalbe(:,estimate.thrFlag)==1,:);
             zjEpsThr = zyEpsThr( zyEpsThr(:,estimate.zjFlag)==1,:);
@@ -239,7 +235,7 @@ function analyzeErrorDistribution()
                 close(figure1);
                 continue;
             end
-            meanTable(k,[5 6 7]) = meanVec;
+            meanTable(k,meanTHeader.indexMean) = meanVec;
             subDir = [save_dir '\指数预测涨幅误差分布'];
             if ~exist(subDir,'dir')
                 mkdir( subDir );
@@ -265,9 +261,7 @@ function analyzeErrorDistribution()
             if status == 0
                 close(figure1);
                 continue;
-            end
-            meanTable(k,[2 3 4]) = meanVec;
-            
+            end            
             % 画有收益的日期的误差分布
             zyEpsThr = subResTalbe( subResTalbe(:,estimate.thrFlag)==1,:);
             zjEpsThr = zyEpsThr( zyEpsThr(:,estimate.zjFlag)==1,:);
@@ -279,7 +273,7 @@ function analyzeErrorDistribution()
                 close(figure1);
                 continue;
             end
-            meanTable(k,[5 6 7]) = meanVec;
+            meanTable(k,meanTHeader.fundAMean) = meanVec;
             subDir = [save_dir '\分级基金A预测涨幅误差分布'];
             if ~exist(subDir,'dir')
                 mkdir( subDir );
@@ -301,13 +295,11 @@ function analyzeErrorDistribution()
             yjEps = subResTalbe( subResTalbe(:,estimate.zjFlag)==0,:);
             totalEps = [zjEps;yjEps];  
             subplot(1,2,1);
-            [status, meanVec ] = plotKsDensity( totalEps, zjEps, yjEps, filterD, fjBName, estimate.FundB_Mode );
+            [status ] = plotKsDensity( totalEps, zjEps, yjEps, filterD, fjBName, estimate.FundB_Mode );
             if status == 0
                 close(figure1);
                 continue;
-            end
-            meanTable(k,[2 3 4]) = meanVec;
-            
+            end                      
             % 画有收益的日期的误差分布
             zyEpsThr = subResTalbe( subResTalbe(:,estimate.thrFlag)==1,:);
             zjEpsThr = zyEpsThr( zyEpsThr(:,estimate.zjFlag)==1,:);
@@ -319,7 +311,7 @@ function analyzeErrorDistribution()
                 close(figure1);
                 continue;
             end
-            meanTable(k,[5 6 7]) = meanVec;
+            meanTable(k,meanTHeader.fundBMean) = meanVec;
             subDir = [save_dir '\分级基金B预测涨幅误差分布'];
             if ~exist(subDir,'dir')
                 mkdir( subDir );
@@ -343,13 +335,11 @@ function analyzeErrorDistribution()
         
         
     end
-    % meanTable不断被覆盖重写，现在没有意义
-%     meanTable(1,:) = [];
-%     listHeader = {'基金代码', '全部日期误差均值','折价日期误差均值','溢价日期误差均值','预计盈利日期误差均值','预计折价盈利日期误差均值','预计溢价盈利日期误差均值' };
-%     filename = [save_dir  '\' num2str(year) '年预估净值误差均值统计表' ];
-%     sheet = 1;   
-%     xlswrite( filename, listHeader, sheet);
-%     startE = 'A2';
-%     xlswrite( filename, meanTable, sheet, startE);
+    meanTable(1,:) = [];
+    filename = [save_dir  '\' num2str(year) '年各项指标预估值误差均值统计表' ];
+    sheet = 1;   
+    xlswrite( filename, meanTHeader.listHeader, sheet);
+    startE = 'A2';
+    xlswrite( filename, meanTable, sheet, startE);
     
 end

@@ -9,6 +9,7 @@ global idxDailyTable;
 global rDetialTable;
 global statList;
 global estimate;
+global meanTHeader;
 %%%%%%%%%%%%%%%% 误差估计表头 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     estimate.muCode = 1;
     estimate.eps = 2;
@@ -25,7 +26,7 @@ global estimate;
     estimate.predIdxIncrease = 13;
     estimate.IndexEps = 14;
     
-    estimate.numOfInstance = 14;
+    estimate.numOfEntries = 14;
     % 需要保存的数据表头（请按照上述顺序)
     estimate.listHeader = {'母基金代码','误差','预测净值','真实净值','误差百分比','折溢价率','折价标志','超过阈值标志'...
         '分级A预估涨幅','分级A预估误差','分级B预估涨幅','分级B预估误差','指数预估涨幅','指数预估误差'};
@@ -35,7 +36,30 @@ global estimate;
     estimate.Index_Mode = 2;    % 分析指数预测收盘价误差分布
     estimate.FundA_Mode = 4;
     estimate.FundB_Mode = 8;
-
+%%%%%%%%%%%%%%%%%%%%%均值表头%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 用误差均值估算滑点率。
+    meanTHeader.muName = 1;
+    meanTHeader.netValuePerc = 2;
+    meanTHeader.zjNetValuePerc = 3;
+    meanTHeader.yjNetValuePerc = 4;
+    meanTHeader.fundAIncrease = 5;
+    meanTHeader.zjFundAIncrease = 6;
+    meanTHeader.yjFundAIncrease = 7;
+    meanTHeader.fundBIncrease = 8;
+    meanTHeader.zjFundBIncrease = 9;
+    meanTHeader.yjFundBIncrease = 10;
+    meanTHeader.indexIncrease = 11;
+    meanTHeader.zjIndexIncrease = 12;
+    meanTHeader.yjIndexIncrease = 13;
+    meanTHeader.numOfEntries = 13;
+    % 下面每个列表里面的顺序很重要
+    meanTHeader.muMean = [meanTHeader.netValuePerc meanTHeader.zjNetValuePerc meanTHeader.yjNetValuePerc];
+    meanTHeader.fundAMean = [meanTHeader.fundAIncrease meanTHeader.zjFundAIncrease meanTHeader.yjFundAIncrease];
+    meanTHeader.fundBMean = [meanTHeader.fundBIncrease meanTHeader.zjFundBIncrease meanTHeader.yjFundBIncrease];
+    meanTHeader.indexMean = [meanTHeader.indexIncrease meanTHeader.zjIndexIncrease meanTHeader.yjIndexIncrease];
+    meanTHeader.listHeader = {'母基金代码','母基金预测净值涨幅误差','折价净值涨幅误差','溢价净值涨幅查','分级A预测涨幅误差','折价涨幅误差','溢价涨幅误差',...
+        '分级B预测涨幅误差','折价涨幅误差','溢价涨幅误差','指数预测涨幅误差','折价涨幅误差','溢价涨幅误差'};
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 %%%%%%%%%%%%%%%%需要统计的基金列表表头%%%%%%%%%%%%%%%%%%%%%%
     statList.muName = 1;
     statList.zsName = 3;
@@ -107,7 +131,7 @@ global estimate;
     resultTable.zjRateFail = 14;        %昨日溢价导致今日无法折价
     resultTable.validMoney = 15;
     resultTable.tradeLimitLeft = 16;    % 因为涨跌停导致的剩余价值
-    resultTable.numOfInstance = 16;     %该变量记录result表格的列数
+    resultTable.numOfEntries = 16;     %该变量记录result表格的列数
     
     resultTable.listHeader = {'日期','累计总套利率','zsRate','当前品总数','操作数','溢价操作数','折价操作数','资金缺乏数',...
         '累计套利率剩余价值','二倍折价套利额外收益','二倍折价套利溢价减益','折价套利率','溢价套利率','折价Fail',...
@@ -130,7 +154,7 @@ global estimate;
     rDetialTable.FcRate = 8;
     rDetialTable.HbRate = 9;
     rDetialTable.TradeLimit = 10;
-    rDetialTable.numOfInstance = 10;
+    rDetialTable.numOfEntries = 10;
 
 %%%%%%%%%%%%%%%%%%%%%%%分级基金套利率表头配置%%%%%%%%%%%%%%%%%%
     rateTable.date = 1;

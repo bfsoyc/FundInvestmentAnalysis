@@ -25,7 +25,7 @@ function [ Mean ] = calTickAverage(root, date, stockId, begT, endT, xIndex)
  
     ticksRange = ticks(ticks(:,1)>=date+begT & ticks(:,1)<date+endT,:);
     if size(ticksRange, 1) == 0
-        disp([num2str(D) '.' num2str(M) '.' num2str(D) ' no valid range']);
+        disp([num2str(Y) '.' num2str(M) '.' num2str(D) ' no valid range']);
         return;
     end
 
