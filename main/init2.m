@@ -10,6 +10,7 @@ global rDetialTable;
 global statList;
 global estimate;
 global meanTHeader;
+global tickTable;
 %%%%%%%%%%%%%%%% 误差估计表头 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     estimate.muCode = 1;
     estimate.eps = 2;
@@ -57,7 +58,7 @@ global meanTHeader;
     meanTHeader.fundAMean = [meanTHeader.fundAIncrease meanTHeader.zjFundAIncrease meanTHeader.yjFundAIncrease];
     meanTHeader.fundBMean = [meanTHeader.fundBIncrease meanTHeader.zjFundBIncrease meanTHeader.yjFundBIncrease];
     meanTHeader.indexMean = [meanTHeader.indexIncrease meanTHeader.zjIndexIncrease meanTHeader.yjIndexIncrease];
-    meanTHeader.listHeader = {'母基金代码','母基金预测净值涨幅误差','折价净值涨幅误差','溢价净值涨幅查','分级A预测涨幅误差','折价涨幅误差','溢价涨幅误差',...
+    meanTHeader.listHeader = {'母基金代码','母基金预测净值涨幅误差','折价净值涨幅误差','溢价净值涨幅误差','分级A预测涨幅误差','折价涨幅误差','溢价涨幅误差',...
         '分级B预测涨幅误差','折价涨幅误差','溢价涨幅误差','指数预测涨幅误差','折价涨幅误差','溢价涨幅误差'};
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 %%%%%%%%%%%%%%%%需要统计的基金列表表头%%%%%%%%%%%%%%%%%%%%%%
@@ -108,7 +109,7 @@ global meanTHeader;
     %fjDailyTable.highPrice = 3;         %最高价
     fjDailyTable.lowPrice = 4;          %最低价
     fjDailyTable.closingPrice = 2;      %收盘价
-    fjDailyTable.tradeAmount = 7;        %交易量
+    fjDailyTable.tradeAmount = 7;        %交易额
 %%%%%%%%%%%%%%%%%%%%%%指数日线表头配置%%%%%%%%%%%%%%%%%%%%%%
     idxDailyTable.date = 1;          %日期
     idxDailyTable.netValue = 2;     
@@ -143,7 +144,13 @@ global meanTHeader;
     %记录所有需要计算年化以及日均值的变量 transform variable
     resultTable.transVar = [ resultTable.yjRate resultTable.zjRate resultTable.tlRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail resultTable.tradeLimitLeft ]; 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%分时数据表头%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    tickTable.time = 1;
+    tickTable.increase = 3;
+    tickTable.tradeVolume = 4;
+    tickTable.turnover = 5;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     rDetialTable.ZYRate = 1;
     rDetialTable.ZjRate = 2;
     rDetialTable.YjRate = 3;

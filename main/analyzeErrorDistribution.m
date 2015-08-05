@@ -1,5 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 该函数分析估值函数的误差分布
+% 该函数分析估值函数(用于估算收盘母基金净值)的误差分布,分级基金和指数的涨幅用
+% 尾盘均值估计。
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function analyzeErrorDistribution()
 %% 添加工程目录
@@ -138,14 +139,14 @@ function analyzeErrorDistribution()
                 
                 
                 if bitand( estiMode, estimate.Index_Mode )  % 指数涨幅没有阈值控制
-                    tickIncreaseMean = calTickAverage( data_root, day, zsName, begT,endT,2 );
+                    tickIncreaseMean = calTickAverage( data_root, day, zsName, begT,endT );
                     resTable(i,estimate.predIdxIncrease) = tickIncreaseMean;
                     realIncrease = change;  %该项前面已经算过,就是chagne
                     resTable(i,estimate.IndexEps) = realIncrease - tickIncreaseMean;
                 end
                 if bitand( estiMode, estimate.FundA_Mode )
                     if( fjAData(fjAIdx, fjDailyTable.tradeAmount) > AfilterAmount ) % 当天交易量大于我们设定的阈值才计算。
-                        tickIncreaseMean = calTickAverage( data_root, day, fjAName, begT,endT,2 );
+                        tickIncreaseMean = calTickAverage( data_root, day, fjAName, begT,endT );
                         resTable(i,estimate.predAIncrease) = tickIncreaseMean;
                         realIncrease = fjAData(fjAIdx, fjDailyTable.increase);
                         resTable(i,estimate.FundAeps) = realIncrease - tickIncreaseMean;
@@ -153,7 +154,7 @@ function analyzeErrorDistribution()
                 end
                 if bitand( estiMode, estimate.FundB_Mode )
                     if( fjBData(fjBIdx, fjDailyTable.tradeAmount) > BfilterAmount ) % 当天交易量大于我们设定的阈值才计算。
-                        tickIncreaseMean = calTickAverage( data_root, day, fjBName, begT,endT,2 );
+                        tickIncreaseMean = calTickAverage( data_root, day, fjBName, begT,endT );
                         resTable(i,estimate.predBIncrease) = tickIncreaseMean;
                         realIncrease = fjBData(fjBIdx, fjDailyTable.increase);
                         resTable(i,estimate.FundBeps) = realIncrease - tickIncreaseMean;
