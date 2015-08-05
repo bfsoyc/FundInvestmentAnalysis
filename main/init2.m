@@ -109,7 +109,7 @@ global tickTable;
     %fjDailyTable.highPrice = 3;         %最高价
     fjDailyTable.lowPrice = 4;          %最低价
     fjDailyTable.closingPrice = 2;      %收盘价
-    fjDailyTable.tradeAmount = 7;        %交易额
+    fjDailyTable.turnover = 7;        %交易额
 %%%%%%%%%%%%%%%%%%%%%%指数日线表头配置%%%%%%%%%%%%%%%%%%%%%%
     idxDailyTable.date = 1;          %日期
     idxDailyTable.netValue = 2;     

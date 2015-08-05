@@ -30,7 +30,7 @@ function analyzeErrorDistribution()
         mkdir( save_dir );
     end
     init2();
-    global statList fjDailyTable estimate meanTHeader;
+    global muDailyTable idxDailyTable resultTable statList fjDailyTable estimate meanTHeader;
     
     configT = {1,'母基金分布',0; 3,'涨幅均差分布',0; 5,'分级A均差分布',2000000; 7,'分级B均差分布',10000000};
     IfilterAmount = configT{2,3};
@@ -89,14 +89,14 @@ function analyzeErrorDistribution()
             continue ;
         end   
 
-        mValueRange = mValues(mValues(:,1)>=begD & mValues(:,1)<endD & mValues(:,2)>0,:);
+        mValueRange = mValues(mValues(:,muDailyTable.date)>=begD & mValues(:,muDailyTable.date)<endD & mValues(:,muDailyTable.netValue)>0,:);
 
         iChanges = csvread([data_root '\日线1\' zsName '.csv']);
-        iChangeRange = iChanges(iChanges(:,1)>=begD & iChanges(:,1)<endD,:);
+        iChangeRange = iChanges(iChanges(:,idxDailyTable.date)>=begD & iChanges(:,idxDailyTable.date)<endD,:);
 
         mNum = size(mValueRange,1);
         resTable = zeros( mNum, estimate.numOfEntries);
-        resTable(:,1) = mValueRange(:,1);   %复制日期列
+        resTable(:,resultTable.date) = mValueRange(:,muDailyTable.date);   %复制日期列
 
         if mNum == 0
             continue;
@@ -104,12 +104,12 @@ function analyzeErrorDistribution()
 
         lastValue = mValueRange(1, 2);
         for i = 2:mNum
-            day = mValueRange(i, 1);
-            value = mValueRange(i, 2);
+            day = mValueRange(i, muDailyTable.date);
+            value = mValueRange(i, muDailyTable.netValue);
 
             fjAIdx = find( fjAData(:,fjDailyTable.date)==day);
             fjBIdx = find( fjBData(:,fjDailyTable.date)==day);
-            iIndex = find(iChangeRange(:,1)==day);
+            iIndex = find(iChangeRange(:,idxDailyTable.date)==day);
 
             if ( isempty(fjAIdx) || isempty(fjBIdx) || isempty(iIndex) || iIndex == 1)
                 % 检查是否缺数据
@@ -145,7 +145,7 @@ function analyzeErrorDistribution()
                     resTable(i,estimate.IndexEps) = realIncrease - tickIncreaseMean;
                 end
                 if bitand( estiMode, estimate.FundA_Mode )
-                    if( fjAData(fjAIdx, fjDailyTable.tradeAmount) > AfilterAmount ) % 当天交易量大于我们设定的阈值才计算。
+                    if( fjAData(fjAIdx, fjDailyTable.turnover) > AfilterAmount ) % 当天交易量大于我们设定的阈值才计算。
                         tickIncreaseMean = calTickAverage( data_root, day, fjAName, begT,endT );
                         resTable(i,estimate.predAIncrease) = tickIncreaseMean;
                         realIncrease = fjAData(fjAIdx, fjDailyTable.increase);
@@ -153,7 +153,7 @@ function analyzeErrorDistribution()
                     end
                 end
                 if bitand( estiMode, estimate.FundB_Mode )
-                    if( fjBData(fjBIdx, fjDailyTable.tradeAmount) > BfilterAmount ) % 当天交易量大于我们设定的阈值才计算。
+                    if( fjBData(fjBIdx, fjDailyTable.turnover) > BfilterAmount ) % 当天交易量大于我们设定的阈值才计算。
                         tickIncreaseMean = calTickAverage( data_root, day, fjBName, begT,endT );
                         resTable(i,estimate.predBIncrease) = tickIncreaseMean;
                         realIncrease = fjBData(fjBIdx, fjDailyTable.increase);
