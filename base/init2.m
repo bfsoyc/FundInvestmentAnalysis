@@ -11,6 +11,7 @@ global statList;
 global estimate;
 global meanTHeader;
 global tickTable;
+global turnoverTHeader;
 %%%%%%%%%%%%%%%% 误差估计表头 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     estimate.muCode = 1;
     estimate.eps = 2;
@@ -39,7 +40,7 @@ global tickTable;
     estimate.FundB_Mode = 8;
 %%%%%%%%%%%%%%%%%%%%%均值表头%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 用误差均值估算滑点率。
-    meanTHeader.muName = 1;
+    meanTHeader.muCode = 1;
     meanTHeader.netValuePerc = 2;
     meanTHeader.zjNetValuePerc = 3;
     meanTHeader.yjNetValuePerc = 4;
@@ -60,7 +61,17 @@ global tickTable;
     meanTHeader.indexMean = [meanTHeader.indexIncrease meanTHeader.zjIndexIncrease meanTHeader.yjIndexIncrease];
     meanTHeader.listHeader = {'母基金代码','母基金预测净值涨幅误差','折价净值涨幅误差','溢价净值涨幅误差','分级A预测涨幅误差','折价涨幅误差','溢价涨幅误差',...
         '分级B预测涨幅误差','折价涨幅误差','溢价涨幅误差','指数预测涨幅误差','折价涨幅误差','溢价涨幅误差'};
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%%%%%%%%%%尾盘交易额百分比统计值表头%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    turnoverTHeader.muCode = 1;
+    turnoverTHeader.fundAMean = 2;
+    turnoverTHeader.fundAPeak = 3;
+    turnoverTHeader.fundAMedian = 4;
+    turnoverTHeader.fundBMean = 5;
+    turnoverTHeader.fundBPeak = 6;
+    turnoverTHeader.fundBMedian = 7;
+    
+    turnoverTHeader.numOfEntries = 7;
+    turnoverTHeader.listHeader = {'母基金代码','分级A比重均值','分级A最大概率比重','分级A比重中位数','分级B比重均值','分级B最大概率比重','分级B比重中位数'};
 %%%%%%%%%%%%%%%%需要统计的基金列表表头%%%%%%%%%%%%%%%%%%%%%%
     statList.muName = 1;
     statList.zsName = 3;

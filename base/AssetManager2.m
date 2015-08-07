@@ -10,6 +10,7 @@ classdef AssetManager2 < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á¬Ğ
         totalMoney    %×Ü×Ê½ğ
     end
     
+    
     methods
         function obj = AssetManager2(handle, total)
             obj.types=[];

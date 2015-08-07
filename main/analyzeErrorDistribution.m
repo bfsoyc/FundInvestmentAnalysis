@@ -56,7 +56,7 @@ function analyzeErrorDistribution()
             muName = ['OF' muName];
         end
         muCode = str2num(muName(3:end));
-        meanTable(k,1) = muCode;
+        meanTable(k,meanTHeader.muCode) = muCode;
                
         fjAName = config{statList.fjAName}{k};      %子基金A名：深交所的以SZ开头
         if( length(fjAName) < 8 )
@@ -102,7 +102,7 @@ function analyzeErrorDistribution()
             continue;
         end
 
-        lastValue = mValueRange(1, 2);
+        lastValue = mValueRange(1, muDailyTable.netValue);
         for i = 2:mNum
             day = mValueRange(i, muDailyTable.date);
             value = mValueRange(i, muDailyTable.netValue);

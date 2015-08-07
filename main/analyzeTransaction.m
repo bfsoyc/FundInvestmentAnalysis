@@ -14,7 +14,7 @@ function analyzeTransaction()
     save_root = '..\result';
     data_root = 'G:\datastore';
     configFile = '\config滤流动性.csv'; %滤流动性副本
-    year = 2015;    % 按年统计才有意义;
+    year = 2013;    % 按年统计才有意义;
     filterD = [year 01 06; year 12 31]; %设置开始与结束的年月日
     begD = getIntDay(filterD(1, :));
     endD = getIntDay(filterD(2, :));
@@ -29,14 +29,14 @@ function analyzeTransaction()
         mkdir( save_dir );
     end
     init2();
-    global statList fjDailyTable meanTHeader tickTable;
+    global statList fjDailyTable tickTable turnoverTHeader;
  
 %% 分析
     % 读配置文件(存储需要分析的基金信息)
     config = readcsv2(configFile, 12);   
     tableLen = length(config{1});  
 
-    meanTable = zeros(tableLen,meanTHeader.numOfEntries);   % 统计每个品种均值。
+    turnoverTable = zeros(tableLen,turnoverTHeader.numOfEntries);   % 统计每个品种尾盘交易额的信息。
     for k = 2:tableLen
         muName = config{statList.muName}{k};
         % 配置文件中基金代号不规范，可能不是完整的8位数，所以要多加判断
@@ -44,7 +44,7 @@ function analyzeTransaction()
             muName = ['OF' muName];
         end
         muCode = str2num(muName(3:end));
-        meanTable(k,1) = muCode;
+        turnoverTable(k,turnoverTHeader.muCode) = muCode;
                
         fjAName = config{statList.fjAName}{k};      %子基金A名：深交所的以SZ开头
         if( length(fjAName) < 8 )
@@ -85,8 +85,8 @@ function analyzeTransaction()
             continue;
         end
         
-        APercent = ones( mNum, 1 );
-        BPercent = ones( mNum, 1 );
+        APercent = zeros( mNum, 1 );
+        BPercent = zeros( mNum, 1 );
         lastValue = mValueRange(1, 2);
         for i = 2:mNum
             day = mValueRange(i, 1);
@@ -130,9 +130,10 @@ function analyzeTransaction()
                         disp(e);
                         continue;
                     end
+                    %validIdx = abs(ticks(:,tickTable.increase)) < 10;   % 非涨跌停
                     ticksRange = ticks(ticks(:,tickTable.time) >= day+begT & ticks(:,tickTable.time) < day+endT,:); %筛选尾盘数据
-                    if size(ticksRange, 1) == 0
-                        disp([ fjAName '-' num2str(Y) '.' num2str(M) '.' num2str(D) ' no valid range']);
+                    if size(ticksRange, 1) < 10
+                        disp([ fjAName '-' num2str(Y) '.' num2str(M) '.' num2str(D) ' no enough valid range']);
                         continue;
                     end
                     sumA = sum( ticksRange(:,tickTable.turnover) );
@@ -143,7 +144,7 @@ function analyzeTransaction()
                         disp([fileDir ' not found']);
                         continue;
                     end              
-                    fileDir2 = [fileDir '\' fjBName '_' num2str(Y) '_' num2str(M)];     % 进入都对应日期的目录
+                    fileDir2 = [fileDir '\' fjBName '_' num2str(Y) '_' num2str(M)];     % 进入到对应日期的目录
                     filename = [fileDir2 '\' fjBName '_' num2str(Y) '_' num2str(M) '_' num2str(D) '.csv'];  
                     try
                         ticks = csvread(filename);  % 读取分时数据
@@ -152,9 +153,9 @@ function analyzeTransaction()
                         disp( e );
                         continue;
                     end
-                    ticksRange = ticks(ticks(:,tickTable.time) >= day+begT & ticks(:,tickTable.time) < day+endT,:); %筛选尾盘数据
-                    if size(ticksRange, 1) == 0
-                        disp([fjBName '-' num2str(Y) '.' num2str(M) '.' num2str(D) ' no valid range']);
+                    ticksRange = ticks(ticks(:,tickTable.time) >= day+begT & ticks(:,tickTable.time) < day+endT ,:); %筛选尾盘数据
+                    if size(ticksRange, 1) < 10
+                        disp([fjBName '-' num2str(Y) '.' num2str(M) '.' num2str(D) ' no enough valid range']);
                         continue;
                     end
                     sumB = sum( ticksRange(:,tickTable.turnover) );
@@ -162,8 +163,8 @@ function analyzeTransaction()
             end
             lastValue = value;
         end
-        APercent( APercent == 1 ) = [];
-        BPercent( BPercent == 1 ) = [];
+        APercent( APercent == 0 ) = [];
+        BPercent( BPercent == 0 ) = [];
         
         % plot result
         figure1 = figure();
@@ -173,33 +174,38 @@ function analyzeTransaction()
             xMin = min(APercent);
             xMax = max(APercent);
             x = xMin:(xMax-xMin)/100:xMax;
-            if length(x) < 1  
+            if length(APercent) < 10  
                 close(figure1);
-                error('please check the data');
+                continue;
             end          
 
             f1 = ksdensity(APercent, x);   %  
             fTitle = {[fjAName '-' list2str(filterD(1,:))  list2str(filterD(2,:))]; '尾盘交易额比重(百分比)概率分布'};
             title(fTitle);
             hold on;
-            plot(x,f1,'b');      
+            plot(x,f1,'b');     
+            [~,PeakIdx] = max(f1);
             Mean = mean(APercent);
             Variance = var(APercent);
             Standard = std(APercent);
+            Median = median(APercent);
             XRange = get(gca,'Xlim');
             YRange = get(gca,'Ylim'); %y轴范围
             text(XRange(1),  YRange(1)*0.1+YRange(2)*0.9, ['\fontsize{8}\color{blue}Sample = ' num2str(length(APercent))]);
             text(XRange(1), YRange(1)*0.15+YRange(2)*0.85, ['\fontsize{8}\color{blue}Mean = ' num2str(Mean)]);
             text(XRange(1), YRange(1)*0.2+YRange(2)*0.8, ['\fontsize{8}\color{blue}Variance = ' num2str(Variance)]);
             text(XRange(1), YRange(1)*0.25+YRange(2)*0.75, ['\fontsize{8}\color{blue}Standard = ' num2str(Standard)]);
+            text(XRange(1), YRange(1)*0.3+YRange(2)*0.70, ['\fontsize{8}\color{blue}Peak = ' num2str(x(PeakIdx))]);
+            text(XRange(1), YRange(1)*0.35+YRange(2)*0.65, ['\fontsize{8}\color{blue}Median = ' num2str(Median)]);
+            turnoverTable(k,[turnoverTHeader.fundAMean turnoverTHeader.fundAPeak turnoverTHeader.fundAMedian]) = [Mean x(PeakIdx) Median ];
             % for B
             subplot(1,2,2);
             xMin = min(BPercent);
             xMax = max(BPercent);
             x = xMin:(xMax-xMin)/100:xMax;
-            if length(x) < 1  
+            if length(BPercent) < 10  
                 close(figure1);
-                error('please check the data');
+                continue;
             end          
 
             f1 = ksdensity(BPercent, x);   %  
@@ -207,33 +213,32 @@ function analyzeTransaction()
             title(fTitle);
             hold on;
             plot(x,f1,'r');      
+            [~,PeakIdx] = max(f1);
             Mean = mean(BPercent);
             Variance = var(BPercent);
             Standard = std(BPercent);
+            Median = median(BPercent);
             XRange = get(gca,'Xlim');
             YRange = get(gca,'Ylim'); %y轴范围
             text(XRange(1), YRange(1)*0.1+YRange(2)*0.9, ['\fontsize{8}\color{red}Sample = ' num2str(length(BPercent))]);
             text(XRange(1), YRange(1)*0.15+YRange(2)*0.85, ['\fontsize{8}\color{red}Mean = ' num2str(Mean)]);
             text(XRange(1), YRange(1)*0.2+YRange(2)*0.8, ['\fontsize{8}\color{red}Variance = ' num2str(Variance)]);
             text(XRange(1), YRange(1)*0.25+YRange(2)*0.75, ['\fontsize{8}\color{red}Standard = ' num2str(Standard)]);
+            text(XRange(1), YRange(1)*0.3+YRange(2)*0.70, ['\fontsize{8}\color{red}Peak = ' num2str(x(PeakIdx))]);
+            text(XRange(1), YRange(1)*0.35+YRange(2)*0.65, ['\fontsize{8}\color{red}Median = ' num2str(Median)]);
+            turnoverTable(k,[turnoverTHeader.fundBMean turnoverTHeader.fundBPeak turnoverTHeader.fundBMedian]) = [Mean x(PeakIdx) Median];
             
         figurePath = [save_dir '\' [muName '-' list2str(filterD(1,:))  list2str(filterD(2,:))] '.bmp'];            
         saveas( gcf, figurePath );
         hold off;
-        close(figure1);
-        
-        % save result
-%         fTitle = [muName '-' list2str(filterD(1,:))  list2str(filterD(2,:))];
-%         fTitle = strrep( fTitle,'.','-');
-%         
-%         save_path = [save_dir '\' fTitle ];
-%         sheet = 1;   
-%         xlswrite( save_path, estimate.listHeader, sheet);   % 请自行确保保存文件名中不存在字符'.'
-%         startE = 'A2';
-%         xlswrite( save_path, resTable, sheet, startE);
-        %csvwrite( save_path, resTable );
-        
-        
+        close(figure1);       
     end
+    
+    turnoverTable(1,:) = [];
+    filename = [save_dir  '\' num2str(year) '分级A、B尾盘交易额比重统计表' ];
+    sheet = 1;   
+    xlswrite( filename, turnoverTHeader.listHeader, sheet);
+    startE = 'A2';
+    xlswrite( filename, turnoverTable, sheet, startE);
     
 end
