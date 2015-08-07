@@ -1,4 +1,4 @@
-classdef AssetManager2 < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á¬ĞøÕÛ¼ÛÊ±£¬½«ËùÓĞ2/3µÄ×Ê½ğ¶¼Ö±½Ó³Ö²ÖÄ¸»ù½ğ½øĞĞÌ×Àû
+classdef AssetManager < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á¬ĞøÕÛ¼ÛÊ±£¬½«ËùÓĞ2/3µÄ×Ê½ğ¶¼Ö±½Ó³Ö²ÖÄ¸»ù½ğ½øĞĞÌ×Àû
     properties
         types         %Ä¸»ù½ğ×´Ì¬£ºÉê¹º¡¢Éê¹ºÏŞÖÆÖĞ¡¢Êê»Ø¡¢Êê»ØÏŞÖÆÖĞ¡¢×ÔÓÉÌ¬
         typeNums
@@ -12,7 +12,7 @@ classdef AssetManager2 < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á¬Ğ
     
     
     methods
-        function obj = AssetManager2(handle, total)
+        function obj = AssetManager(handle, total)
             obj.types=[];
             len = 0;
             obj.typeNums = len;
@@ -40,12 +40,12 @@ classdef AssetManager2 < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á¬Ğ
 
             if obj.typeNums >= 1                %%%%%%%%ÖØÖÃËùÓĞ»ù½ğÎª³õÊ¼Ì¬%%%%%%%¼ÙÉèĞÔµÄ×ö·¨
                 for i = 1:obj.typeNums
-                    tmp = [tmp Type2(obj.types(i).OFName)];
+                    tmp = [tmp Type(obj.types(i).OFName)];
                 end
             end
             
             for i=1:len;
-                tmp = [tmp Type2(OF(i))];
+                tmp = [tmp Type(OF(i))];
             end
             obj.types = tmp;
             obj.typeNums = obj.typeNums + len;
@@ -60,10 +60,10 @@ classdef AssetManager2 < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á¬Ğ
         function isOk = updateState(obj)     %Ã¿ÈÕ½»Ò×½áÊøºó×´Ì¬µÄ³ÖÓĞÖ¸ÊıµÄ×´Ì¬±ä»¯£¬·Ö¼¶»ù½ğ²»ÓÃ¿¼ÂÇ
             for i=1:obj.typeNums%%??±äÁ¿×÷ÓÃÓò
                 obj.types(i).lastOp = obj.types(i).curOp;
-                if obj.types(i).lastOp == Type2.NONE2 || obj.types(i).lastOp == Type2.ZHEJIA2
-                    obj.types(i).curOp = Type2.NONE2;
+                if obj.types(i).lastOp == Type.NONE2 || obj.types(i).lastOp == Type.ZHEJIA2
+                    obj.types(i).curOp = Type.NONE2;
                 else
-                    obj.types(i).curOp = Type2.NONE1;
+                    obj.types(i).curOp = Type.NONE1;
                 end
             end
             obj.validMoney = obj.validMoney + obj.shMoney;
@@ -80,10 +80,10 @@ classdef AssetManager2 < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á¬Ğ
             if pos == 0;
                 return;
             end
-            if obj.types(pos).lastOp == Type2.YIJIA1    %Ç°Ò»Ìì×öÁËÒç¼Û£¬¸ÕÉê¹º»ØÀ´µÄÄ¸»ù½ğ¿ÉÒÔ²ğ·Öµ«²»ÄÜÁ¢¿ÌÊê»Ø£¿ ËùÒÔ²»ÄÜÂíÉÏ×öÕÛ¼Û
+            if obj.types(pos).lastOp == Type.YIJIA1    %Ç°Ò»Ìì×öÁËÒç¼Û£¬¸ÕÉê¹º»ØÀ´µÄÄ¸»ù½ğ¿ÉÒÔ²ğ·Öµ«²»ÄÜÁ¢¿ÌÊê»Ø£¿ ËùÒÔ²»ÄÜÂíÉÏ×öÕÛ¼Û
                 return;
             end
-            if obj.types(pos).lastOp == Type2.NONE1 || obj.types(pos).lastOp == Type2.YIJIA2 || obj.types(pos).lastOp == Type2.ZHEJIA1
+            if obj.types(pos).lastOp == Type.NONE1 || obj.types(pos).lastOp == Type.YIJIA2 || obj.types(pos).lastOp == Type.ZHEJIA1
                 % YIJIA2 Êµ¼ÊÉÏ¾ÍÊÇ»Ø¹éµ½³õÊ¼×´Ì¬¡£
                 if obj.validMoney < obj.handleRate/2    
                     isOk = -1;
@@ -106,16 +106,16 @@ classdef AssetManager2 < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á¬Ğ
             if num == 1
                 obj.validMoney = obj.validMoney - obj.handleRate/2;%ÂòÈë·Ö¼¶»ù½ğ£¬»¨·ÑµôÒ»·İ×Ê½ğ
                 obj.shMoneyFreez = obj.shMoneyFreez + obj.handleRate/2;
-                obj.types(pos).curOp = Type2.ZHEJIA1;
+                obj.types(pos).curOp = Type.ZHEJIA1;
             else
-                if obj.types(pos).lastOp == Type2.NONE2 || obj.types(pos).lastOp == Type2.ZHEJIA2   % ³Ö²Ö2·İÄ¸»ù½ğµÄÇé¿ö
+                if obj.types(pos).lastOp == Type.NONE2 || obj.types(pos).lastOp == Type.ZHEJIA2   % ³Ö²Ö2·İÄ¸»ù½ğµÄÇé¿ö
                     obj.validMoney = obj.validMoney - obj.handleRate;
                     obj.shMoneyFreez = obj.shMoneyFreez + obj.handleRate;
                 else
                     obj.validMoney = obj.validMoney - obj.handleRate/2;
                     obj.shMoneyFreez = obj.shMoneyFreez + obj.handleRate/2;
                 end
-                obj.types(pos).curOp = Type2.ZHEJIA2;%ºÏ²¢AB·İ¶î*2£¬µ«¿ÉÄÜÊÇÖ»Ì×ÀûÁËÒ»·İÄ¸»ù½ğ£¬Ò²¿ÉÄÜÌ×ÀûÁËÁ½·İÄ¸»ù½ğ£¬µÃÊÓÇ°Ò»½»Ò×ÈÕµÄ¾ßÌåÇé¿ö
+                obj.types(pos).curOp = Type.ZHEJIA2;%ºÏ²¢AB·İ¶î*2£¬µ«¿ÉÄÜÊÇÖ»Ì×ÀûÁËÒ»·İÄ¸»ù½ğ£¬Ò²¿ÉÄÜÌ×ÀûÁËÁ½·İÄ¸»ù½ğ£¬µÃÊÓÇ°Ò»½»Ò×ÈÕµÄ¾ßÌåÇé¿ö
             end
         end
         
@@ -128,7 +128,7 @@ classdef AssetManager2 < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á¬Ğ
             lastOp = obj.types(pos).lastOp;
             %Òç¼ÛÌ×ÀûÊÇÂô³ö×Ó»ù½ğA£¬B£¬Í¬Ê±²ğ·Ö²ÖÖĞµÄÄ¸»ù½ğ²¢Éê¹ºĞÂµÄÏàÍ¬·İ¶îµÄÄ¸»ù½ğ
             %ÒÔÎª´æÔÚÃ¤²ğ£¬ËùÒÔÒ»°ãÇé¿öÏÂ£¬Òç¼ÛÌ×Àû¿ÉÒÔÃ¿¸ö½»Ò×ÈÕ³ÖĞø²»¶ÏµØ½øĞĞ
-            if lastOp == Type2.NONE1 || lastOp == Type2.YIJIA1 || lastOp == Type2.YIJIA2 || lastOp == Type2.ZHEJIA1
+            if lastOp == Type.NONE1 || lastOp == Type.YIJIA1 || lastOp == Type.YIJIA2 || lastOp == Type.ZHEJIA1
                 isOk = 1;
             else
                 isOk = 2;
@@ -137,12 +137,12 @@ classdef AssetManager2 < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á¬Ğ
         
         function doYj(obj,OF)  %%ÓÉÓÚÉê¹ºÊÇÔÚÃ¿ÈÕ½»Ò×½áÊøºó²Å¿ªÊ¼¿Û·Ñ£¬ËùÒÔ×Ê½ğÃ»Ó°Ïì
             pos = obj.find(OF);
-            obj.types(pos).curOp = Type2.YIJIA1;
+            obj.types(pos).curOp = Type.YIJIA1;
         end
         
         function doSpl(obj,OF)  %%·Ö²ğÒ»°ëÄ¸»ù½ğ
             pos = obj.find(OF);
-            obj.types(pos).curOp = Type2.YIJIA2;
+            obj.types(pos).curOp = Type.YIJIA2;
         end
         %²éÑ¯Ö¸¶¨Æ·ÖÖÔÚtypesÊı×éÖĞµÄÎ»ÖÃ
         %OF Ö¸¶¨Æ·ÖÖµÄÄ¸»ù½ğ´úÂë

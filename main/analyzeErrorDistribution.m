@@ -29,7 +29,7 @@ function analyzeErrorDistribution()
     if ~exist(save_dir,'dir')
         mkdir( save_dir );
     end
-    init2();
+    init();
     global muDailyTable idxDailyTable resultTable statList fjDailyTable estimate meanTHeader;
     
     configT = {1,'母基金分布',0; 3,'涨幅均差分布',0; 5,'分级A均差分布',2000000; 7,'分级B均差分布',10000000};

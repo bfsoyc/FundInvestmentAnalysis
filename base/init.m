@@ -1,4 +1,4 @@
-function init2()
+function init()
 global erateTable;
 global resultTable;
 global rateTable;

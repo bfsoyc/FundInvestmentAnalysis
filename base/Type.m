@@ -1,4 +1,4 @@
-classdef Type2 < handle
+classdef Type < handle
     properties
         lastOp
         curOp
@@ -14,7 +14,7 @@ classdef Type2 < handle
         ZHEJIA2 = 5;  %母基金持仓情况下 折价套利
     end
     methods
-        function obj = Type2(arg)
+        function obj = Type(arg)
             obj.OFName = arg;
             obj.lastOp = obj.NONE1;
             obj.curOp = obj.NONE1;

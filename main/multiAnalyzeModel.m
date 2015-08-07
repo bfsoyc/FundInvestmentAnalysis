@@ -3,7 +3,7 @@
 %   操作指定品种(selectMode=1)，并且不支持权重设置
 %   收益率计算方式：    需要除以当天的基金持仓品总数，即每天的总资产是恒定的，平均分配到各个品种中。
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function multiAnalyzeModel1()
+function multiAnalyzeModel()
 %% 添加工程目录
     Files = dir(fullfile( '..\','*.*'));
     for i = 1:length(Files)
@@ -13,12 +13,12 @@ function multiAnalyzeModel1()
     end
     
 %% 变量设置
-    bgtyear = 2014;
-    edtyear = 2014;
-    init2();
-    global resultTable fjDailyTable rateTable configTable muDailyTable idxDailyTable rDetialTable statList;
+    bgtyear = 2015;
+    edtyear = 2015;
+    init();
+    global resultTable fjDailyTable rateTable muDailyTable idxDailyTable rDetialTable statList;
 
-    handleRate = [2 4];%2/3、2/4持仓
+    handleRate = [2 3];%2/3、2/4持仓
     zjType =2;     %折价类型 一倍，两倍……
     slipRatio = 0;  %N倍滑点率，0时代表不考虑滑点
     configFile = '\config滤流动性.csv';
@@ -97,10 +97,10 @@ srclen = size(Src,2);
 for year = bgtyear:edtyear
     bgt = getIntDay([year, 1, 1]);
     edt = getIntDay([year, 12, 31]);
-    assetManager2 = AssetManager2(handleRate(1), handleRate(2));%2/3持仓
-    Result=zeros(1,resultTable.numOfInstance);  % Result每一行记录了每一个交易日的总体折溢盈亏状况， 这里初始化第一行。
+    assetManager = AssetManager(handleRate(1), handleRate(2));%2/3持仓
+    Result=zeros(1,resultTable.numOfEntries);  % Result每一行记录了每一个交易日的总体折溢盈亏状况， 这里初始化第一行。
     
-    resDetial = zeros( rDetialTable.numOfInstance,1,srclen+1 ); % resDetial( :, i, j) 记录了第i个交易日第j个基金品种的信息（折溢率等等，详情见结构体 rDetialtable,由第一个索引指定）, 这里预先分配内存。
+    resDetial = zeros( rDetialTable.numOfEntries,1,srclen+1 ); % resDetial( :, i, j) 记录了第i个交易日第j个基金品种的信息（折溢率等等，详情见结构体 rDetialtable,由第一个索引指定）, 这里预先分配内存。
 
     ResultRowCnt = 2;                %Result 表格的行计数器 从第二行开始
     zsHsBgt = 0;
@@ -110,7 +110,7 @@ for year = bgtyear:edtyear
     for date = bgt+1:edt %%确保取到昨日净值
         disEDay=[];     %溢价的日期  优先溢价（避免现金不够做折价），折价时先保存，最后排序后选择最大的做
         yjEDay=[];      %折价的日期   
-        dailyRes = zeros( 1, resultTable.numOfInstance );   %每天的结果，就是Result中的一行
+        dailyRes = zeros( 1, resultTable.numOfEntries );   %每天的结果，就是Result中的一行
         isTrade = 0;
         RateRow = RateRow+1;
         resDetial(:,RateRow, rateTable.date ) = date;
@@ -145,9 +145,9 @@ for year = bgtyear:edtyear
             if muData(muDailyTable.netValue) == 0
                 continue;
             end
-            isNew = assetManager2.find(Src{i}.name);
+            isNew = assetManager.find(Src{i}.name);
             if isNew == -1
-                assetManager2.addTypes(Src{i}.name);
+                assetManager.addTypes(Src{i}.name);
             end
             zsHsClose  = zsHs300(indexHs, 2);
             if zsHsBgt == 0
@@ -193,7 +193,7 @@ for year = bgtyear:edtyear
                 pre.sy = (fjAData(fjDailyTable.closingPrice)*Src{i}.aShare+fjBData(fjDailyTable.closingPrice)*Src{i}.bShare)*(1-Src{i}.stockFee-Src{i}.slipRate*slipRatio);
                 % 收益的计算，由卖出子基金A，B获得： sy = （子基金A，B总市值）*（1-股票交易手续费-滑点率*滑点比率）
                 % ！！！！！！！！！！！滑点率不应该提现在母基金上吗？
-                pre.syRate = (pre.sy-pre.cost)/pre.cost * assetManager2.CcRate();
+                pre.syRate = (pre.sy-pre.cost)/pre.cost * assetManager.CcRate();
                 
                 if changeA < -0.0995 || changeB < -0.0995
                     disp([num2str(date) ' ' num2str(Src{i}.name) ' A或B跌停']);
@@ -213,7 +213,7 @@ for year = bgtyear:edtyear
                 dis.pos = i;
                 dis.cost = (fjAData(fjDailyTable.closingPrice)*Src{i}.aShare+fjBData(fjDailyTable.closingPrice)*Src{i}.bShare)*(1+Src{i}.stockFee+Src{i}.slipRate*slipRatio);
                 dis.sy = muData(muDailyTable.netValue)*(1-Src{i}.redeemFee);
-                dis.syRate = (dis.sy-dis.cost)/dis.cost * assetManager2.CcRate();
+                dis.syRate = (dis.sy-dis.cost)/dis.cost * assetManager.CcRate();
                 if changeA > 0.0995 || changeB > 0.0995
                     disp([num2str(date) ' ' num2str(Src{i}.name) ' A或B涨停']);
                     resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = dis.syRate;  
@@ -237,11 +237,11 @@ for year = bgtyear:edtyear
         if ~isempty(yjEDay)
             for j = 1:size(yjEDay,2);
                 item = yjEDay(j);
-                isOk = assetManager2.canDoYj(Src{item.pos}.name);
+                isOk = assetManager.canDoYj(Src{item.pos}.name);
                 if isOk == 2    % 溢价是基本都可以做的，唯一不可以做的情况是没有子基金A,B的持仓（前一天为了做二倍折价而多合并了母基金）
                     if item.rate > 0% 其实这个条件判断是多余的，因为 yjEDay里的肯定是溢价的
                         disp(['split ' num2str(Src{item.pos}.name)]);
-                        assetManager2.doSpl(Src{item.pos}.name);    % 溢价情况下，多了母基金，则要拆分。
+                        assetManager.doSpl(Src{item.pos}.name);    % 溢价情况下，多了母基金，则要拆分。
                         resDetial( rDetialTable.FHRate , RateRow, rateTable.date+item.pos) = item.rate;
                         resDetial( rDetialTable.FcRate , RateRow, rateTable.date+item.pos) = item.rate;
                     end
@@ -250,7 +250,7 @@ for year = bgtyear:edtyear
                         
                     end
                 elseif isOk == 1 && item.rate > Src{item.pos}.YjThresholds  
-                    assetManager2.doYj(Src{item.pos}.name);  %%！！TODO更新实时操作而导致资产状态变化
+                    assetManager.doYj(Src{item.pos}.name);  %%！！TODO更新实时操作而导致资产状态变化
                     dailyRes( resultTable.yjNum ) = dailyRes( resultTable.yjNum )+1;
                     dailyRes( resultTable.yjRate ) = dailyRes( resultTable.yjRate ) + item.syRate;        % 套利率累加
                     resDetial( rDetialTable.YjSyRate , RateRow, rateTable.date+item.pos) = item.syRate;
@@ -265,7 +265,7 @@ for year = bgtyear:edtyear
             
             for j = 1:size(disEDay,2);  %不做阈值判断？
                 item = disEDay(j);
-                isOk = assetManager2.canDoZj(Src{item.pos}.name);
+                isOk = assetManager.canDoZj(Src{item.pos}.name);
                 if isOk == 2
                     dailyRes( resultTable.zjRatePlus ) = dailyRes( resultTable.zjRatePlus ) + item.syRate;  % 指二倍折价策略比一倍折价策略多出的收益？
                 end
@@ -280,7 +280,7 @@ for year = bgtyear:edtyear
                         end
                     end
                     
-                    assetManager2.doZj(Src{item.pos}.name, zjNum);  % zjNum == 2 不表示可以做2倍折价，而是该折价操作后，T+1天拥有2倍持仓
+                    assetManager.doZj(Src{item.pos}.name, zjNum);  % zjNum == 2 不表示可以做2倍折价，而是该折价操作后，T+1天拥有2倍持仓
                     dailyRes( resultTable.zjNum ) = dailyRes( resultTable.zjNum )+1;
                     dailyRes( resultTable.zjRate ) = dailyRes( resultTable.zjRate ) + item.syRate*isOk;
                     resDetial( rDetialTable.ZjSyRate , RateRow, rateTable.date+item.pos) = item.syRate*isOk;
@@ -297,15 +297,15 @@ for year = bgtyear:edtyear
 
         dailyRes(resultTable.date) = date;
         dailyRes(resultTable.zsRate) = zsHsClose / zsHsBgt; 
-        dailyRes(resultTable.vilidVar) = assetManager2.typeNums;
-        dailyRes(resultTable.validMoney) = assetManager2.validMoney;
-        dailyRes(resultTable.regVar) = dailyRes(resultTable.regVar)/assetManager2.typeNums;            %必须每天标准化
+        dailyRes(resultTable.vilidVar) = assetManager.typeNums;
+        dailyRes(resultTable.validMoney) = assetManager.validMoney;
+        dailyRes(resultTable.regVar) = dailyRes(resultTable.regVar)/assetManager.typeNums;            %必须每天标准化
         
         Result(ResultRowCnt,:) = dailyRes;
         Result(ResultRowCnt,resultTable.cumVar ) = Result(ResultRowCnt-1,resultTable.cumVar )+Result(ResultRowCnt,resultTable.cumVar );       
         ResultRowCnt= ResultRowCnt+1;
         
-        assetManager2.updateState();      %每日交易结束，模拟证券公司操作，更新资产状态
+        assetManager.updateState();      %每日交易结束，模拟证券公司操作，更新资产状态
     end    
     Result(:,resultTable.tlRate) = Result(:,resultTable.yjRate) + Result(:,resultTable.zjRate); %totalTlRate = yjRate + zjRate; 总的套利率等于溢价套利率加上折价套利率 
     Result(:,resultTable.opNum) = Result(:,resultTable.yjNum) + Result(:,resultTable.zjNum);    %opNum = yjNums + zjNums;       总的套利次数等于溢价套利次数加上折价套利次数
