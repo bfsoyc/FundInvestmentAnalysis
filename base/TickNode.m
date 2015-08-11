@@ -1,6 +1,6 @@
 classdef TickNode
     properties
-        muName;             % 母基金代号
+        code;             % 母基金代号
         netvalue;           % 母基金当天净值
         
         fjAName;            % 分级A代号

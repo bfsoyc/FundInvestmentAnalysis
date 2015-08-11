@@ -6,6 +6,24 @@
 %           OF: CellÊý×é,Ã¿Ò»¸öµ¥Ôª´ú±íÒ»¸ö»ù½ð´úÂë
 %           w: ¹éÒ»»¯È¨ÖØ
 %           netvalue: ½¨²Öµ±ÌìÄ¸»ù½ð¾»Öµ
+%
+%       ÅÐ¶ÏÄÜ·ñ×öÕÛ¼Û
+%       [isOk,pos] = canDoZj(obj, OF, cost)
+%           cost: ÐèÒªµÄ×Ê½ð
+%
+%       ½øÐÐÕÛ¼Û²Ù×÷
+%       doZj(obj, OF, cost, retrive, num)
+%           retrive: Êê»ØÄ¸»ù½ð»ØÊÕµÄ×Ê½ð
+%           num: Îª1Ê±£¬ÕÛ¼Û²Ù×÷ºó±£ÁôÒ»·ÝÄ¸»ù½ð£¬·ñÔòºÏ²¢¸Õ¹ºÈëµÄ·Ö¼¶»ù½ð¶àÒ»·ÝÄ¸»ù½ð³Ö²Ö
+%       
+%       ÅÐ¶ÏÄÜ·ñ×öÒç¼Û
+%       [isOk, pos] = canDoYj(obj, OF)
+%           ·µ»ØÖµ: 
+%           isOk = 1ÎªÂú×ãÒç¼ÛÌ×ÀûÌõ¼þ£¬ = 2 ÎªÒòÃ»ÓÐ·Ö¼¶A¡¢BµÄ³Ö²Ö¶øÎÞ·¨Ì×Àû¡£
+%
+%       ½øÐÐÒç¼Û²Ù×÷
+%       doYj(obj, OF, profit)
+%           profit: ±¾´Î²Ù×÷µÄÓ¯Àû¶î£¬ profit = gain - cost
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ðºÍ·Ö¼¶×Ê½ðµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ð£¬Á¬ÐøÕÛ¼ÛÊ±£¬½«ËùÓÐ2/3µÄ×Ê½ð¶¼Ö±½Ó³Ö²ÖÄ¸»ù½ð½øÐÐÌ×Àû
@@ -31,6 +49,9 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ðºÍ·Ö¼¶×Ê½ðµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ð£¬Á
             obj.handleRate = handleRate;
             obj.holdings = [];
             obj.types = [];
+            obj.typeNums = 0;
+            obj.shMoneyFreez = 0;
+            obj.shMoney = 0;
             % log 
             fprintf('-³õÊ¼»¯ Í¶Èë×Ê½ð %d.\n', obj.validMoney );
         end
@@ -57,18 +78,11 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ðºÍ·Ö¼¶×Ê½ðµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ð£¬Á
             obj.typeNums = obj.typeNums + len;
             isOk=1;            
         end        
-        
-        %¶ÔÓÚµ¥Ö»»ù½ð£¬Ã¿´ÎÌ×ÀûÁ÷¶¯µÄ×Ê½ðÊµÖÊÊÇ³Ö²Ö×Ê½ðµÄÒ»°ë£¬CcRate()·µ»Ø¸Ã²¿·Ö×Ê½ðÕ¼×Ü×Ê½ðµÄ°Ù·Ö±È£¡£¡´í£¬ÊÇÕ¼¸ÃÆ·×Ü×Ü×Ê½ðµÄ°Ù·Ö±È£¡
-        function cc = CcRate(obj)
-            cc = obj.handleRate/obj.totalRate/2;
-        end
-        
-
-        
+            
         %Ã¿ÈÕ½»Ò×½áÊøºó£¬¸üÐÂÄ¸»ù½ð×´Ì¬
         %ÎÞ²ÎÊý
         function isOk = updateState(obj)     %Ã¿ÈÕ½»Ò×½áÊøºó×´Ì¬µÄ³ÖÓÐÖ¸ÊýµÄ×´Ì¬±ä»¯£¬·Ö¼¶»ù½ð²»ÓÃ¿¼ÂÇ
-            for i=1:obj.typeNums%%??±äÁ¿×÷ÓÃÓò
+            for i = 1:obj.typeNums 
                 obj.types(i).lastOp = obj.types(i).curOp;
                 if obj.types(i).lastOp == Type.NONE2 || obj.types(i).lastOp == Type.ZHEJIA2
                     obj.types(i).curOp = Type.NONE2;
@@ -76,15 +90,15 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ðºÍ·Ö¼¶×Ê½ðµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ð£¬Á
                     obj.types(i).curOp = Type.NONE1;
                 end
             end
+            % log
+            fprintf('-½»Ò×ÈÕ½áËã,µ±ÌìÏÖ½ð %.2f, ½â¶³×Ê½ð %.2f £¬×ÜÏÖ½ð %.2f \n', obj.validMoney, obj.shMoney, obj.validMoney+obj.shMoney );
             obj.validMoney = obj.validMoney + obj.shMoney;
             obj.shMoney = obj.shMoneyFreez;
             obj.shMoneyFreez = 0;
             isOk = 1;    
         end
         
-        %ÅÐ¶ÏÊÇ·ñ¿É×öÕÛ¼Û²Ù×÷
-        %OF Ä¸»ù½ð´úÂë
-        function isOk = canDoZj(obj,OF)
+        function [isOk,pos] = canDoZj(obj, OF, cost)
             isOk = 0;
             pos = obj.find(OF);
             if pos == 0;
@@ -95,13 +109,14 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ðºÍ·Ö¼¶×Ê½ðµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ð£¬Á
             end
             if obj.types(pos).lastOp == Type.NONE1 || obj.types(pos).lastOp == Type.YIJIA2 || obj.types(pos).lastOp == Type.ZHEJIA1
                 % YIJIA2 Êµ¼ÊÉÏ¾ÍÊÇ»Ø¹éµ½³õÊ¼×´Ì¬¡£
-                if obj.validMoney < obj.handleRate/2    
+                if obj.validMoney < cost   
                     isOk = -1;
                 else
+                    
                     isOk = 1;
                 end
             else        %Ê£ÓàµÄÁ½ÖÖ×´Ì¬ ¶¼ÊÇ³ÖÓÐ2±¶Ä¸»ù½ðµÄ×´Ì¬
-                if obj.validMoney < obj.handleRate
+                if obj.validMoney < 2*cost
                     isOk = -2;
                 else
                     isOk = 2;
@@ -109,35 +124,33 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ðºÍ·Ö¼¶×Ê½ðµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ð£¬Á
             end
         end
         
-        %ÕÛ¼Û²Ù×÷
-        %OF Ä¸»ù½ð´úÂë
-        function  doZj(obj,OF,num)
+        function  doZj(obj, OF, cost, retrive, num)   
             pos = obj.find(OF);
             if num == 1
-                obj.validMoney = obj.validMoney - obj.handleRate/2;%ÂòÈë·Ö¼¶»ù½ð£¬»¨·ÑµôÒ»·Ý×Ê½ð
-                obj.shMoneyFreez = obj.shMoneyFreez + obj.handleRate/2;
+                obj.validMoney = obj.validMoney - cost;%ÂòÈë·Ö¼¶»ù½ð£¬»¨·ÑµôÒ»·Ý×Ê½ð
+                obj.shMoneyFreez = obj.shMoneyFreez + retrive;
                 obj.types(pos).curOp = Type.ZHEJIA1;
             else
                 if obj.types(pos).lastOp == Type.NONE2 || obj.types(pos).lastOp == Type.ZHEJIA2   % ³Ö²Ö2·ÝÄ¸»ù½ðµÄÇé¿ö
-                    obj.validMoney = obj.validMoney - obj.handleRate;
-                    obj.shMoneyFreez = obj.shMoneyFreez + obj.handleRate;
+                    obj.validMoney = obj.validMoney - 2*cost;
+                    obj.shMoneyFreez = obj.shMoneyFreez + 2*retrive;
                 else
-                    obj.validMoney = obj.validMoney - obj.handleRate/2;
-                    obj.shMoneyFreez = obj.shMoneyFreez + obj.handleRate/2;
+                    obj.validMoney = obj.validMoney - cost;
+                    obj.shMoneyFreez = obj.shMoneyFreez + retrive;
                 end
                 obj.types(pos).curOp = Type.ZHEJIA2;%ºÏ²¢AB·Ý¶î*2£¬µ«¿ÉÄÜÊÇÖ»Ì×ÀûÁËÒ»·ÝÄ¸»ù½ð£¬Ò²¿ÉÄÜÌ×ÀûÁËÁ½·ÝÄ¸»ù½ð£¬µÃÊÓÇ°Ò»½»Ò×ÈÕµÄ¾ßÌåÇé¿ö
             end
         end
         
-        function isOk = canDoYj(obj,OF)
-            isOk = 0;
+        function [isOk, pos] = canDoYj(obj, OF)
             pos = obj.find(OF);
             if pos == -1;
-                return;
+                error(['Ã»ÓÐÄ¸»ù½ð %d' num2str(OF)]);
             end
             lastOp = obj.types(pos).lastOp;
+            
             %Òç¼ÛÌ×ÀûÊÇÂô³ö×Ó»ù½ðA£¬B£¬Í¬Ê±²ð·Ö²ÖÖÐµÄÄ¸»ù½ð²¢Éê¹ºÐÂµÄÏàÍ¬·Ý¶îµÄÄ¸»ù½ð
-            %ÒÔÎª´æÔÚÃ¤²ð£¬ËùÒÔÒ»°ãÇé¿öÏÂ£¬Òç¼ÛÌ×Àû¿ÉÒÔÃ¿¸ö½»Ò×ÈÕ³ÖÐø²»¶ÏµØ½øÐÐ
+            %ÒòÎª´æÔÚÃ¤²ð£¬ËùÒÔÒ»°ãÇé¿öÏÂ£¬Òç¼ÛÌ×Àû¿ÉÒÔÃ¿¸ö½»Ò×ÈÕ³ÖÐø²»¶ÏµØ½øÐÐ
             if lastOp == Type.NONE1 || lastOp == Type.YIJIA1 || lastOp == Type.YIJIA2 || lastOp == Type.ZHEJIA1
                 isOk = 1;
             else
@@ -145,14 +158,16 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ðºÍ·Ö¼¶×Ê½ðµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ð£¬Á
             end
         end
         
-        function doYj(obj,OF)  %%ÓÉÓÚÉê¹ºÊÇÔÚÃ¿ÈÕ½»Ò×½áÊøºó²Å¿ªÊ¼¿Û·Ñ£¬ËùÒÔ×Ê½ðÃ»Ó°Ïì
+        function doYj(obj, OF, profit)  %%ÓÉÓÚÉê¹ºÊÇÔÚÃ¿ÈÕ½»Ò×½áÊøºó²Å¿ªÊ¼¿Û·Ñ£¬ËùÒÔ×Ê½ðÃ»Ó°Ïì
             pos = obj.find(OF);
             obj.types(pos).curOp = Type.YIJIA1;
+            obj.validMoney = obj.validMoney + profit;
         end
         
         function doSpl(obj,OF)  %%·Ö²ðÒ»°ëÄ¸»ù½ð
             pos = obj.find(OF);
             obj.types(pos).curOp = Type.YIJIA2;
+            fprintf('--Ä¸»ù½ð %d ²ð·Ö\n', OF ); 
         end
         %²éÑ¯Ö¸¶¨Æ·ÖÖÔÚtypesÊý×éÖÐµÄÎ»ÖÃ
         %OF Ö¸¶¨Æ·ÖÖµÄÄ¸»ù½ð´úÂë

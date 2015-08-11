@@ -33,6 +33,7 @@ data_root = 'G:\datastore';
 configFile = '\config7_30.csv';
 [selectFund,w] = getSelectionFund();
 w = w/sum(w);
+
 %%  读取数据
 config = readcsv2(configFile, 12);   %
 zsHs300 = csvread('G:\datastore\日线1\SZ399300.csv');
@@ -98,15 +99,12 @@ for year = bgtyear:edtyear
     bgt = getIntDay([year, 1, 1]);
     edt = getIntDay([year, 12, 31]);
     
+    diary off;
+    delete([save_root '\log.txt']);
     diary([save_root '\log.txt']); %日志   
     manager = AssetManagerQQQ(initMoney,handleRate(1)/handleRate(2));
     % 先建仓
-    for i = 1:srclen
-        % 筛选日期范围内的(后面用到)
-%         fjAData = Src{i}.fjAData(Src{i}.fjAData(:, fjDailyTable.date) >= bgt & Src{i}.fjAData(:, fjDailyTable.date) < edt, : );
-%         fjBData = Src{i}.fjBData(Src{i}.fjBData(:, fjDailyTable.date) >= bgt & Src{i}.fjBData(:, fjDailyTable.date) < edt, : );
-%         zsData = Src{i}.zsData(Src{i}.zsData(:, idxDailyTable.date) >= bgt & Src{i}.zsData(:, idxDailyTable.date) < edt, : );
-              
+    for i = 1:srclen              
         muData = Src{i}.muData(Src{i}.muData(:, muDailyTable.date) >= bgt & Src{i}.muData(:, muDailyTable.date) < edt, : );
         idx = 1;       
         while( ~muData(idx, muDailyTable.netValue ) )
@@ -122,19 +120,21 @@ for year = bgtyear:edtyear
     ResultRowCnt = 2;                %Result 表格的行计数器 从第二行开始
     zsHsBgt = 0;
     zsHsClose = 0;
-    RateRow = 0;
     
     
     
     %按日计算
     for date = bgt+1:edt % 确保取到昨日净值
+        resDetial(:,ResultRowCnt, rateTable.date ) = date;
         [Y, M, D] = getVectorDay( date );
+        allTicks = [];
         for i = 1:srclen    % 对每个品种分级基金tick数据筛选出尾盘3分钟的交易的数据并计算折溢价率。
             indexMu = find( Src{i}.muData(:,muDailyTable.date)==date);   
             indexFjA = find( Src{i}.fjAData(:,fjDailyTable.date)==date);
             indexFjB = find( Src{i}.fjBData(:,fjDailyTable.date)==date);
             indexZs = find( Src{i}.zsData(:,idxDailyTable.date)==date);
             indexHs = find( zsHs300(:,idxDailyTable.date)==date);  
+            
             if isempty(indexMu) || isempty(indexFjA) || isempty(indexZs) || isempty(indexFjB) || isempty(indexHs)
                continue;
             end
@@ -143,19 +143,22 @@ for year = bgtyear:edtyear
             end
             % 设置变量别名           
             muData = Src{i}.muData( indexMu , : );          %当天母基金数据
-            prev_muData = Src{i}.muData( indexMu-1 , : );    %前一天数据           
-            fjAData = Src{i}.fjAData( indexFjA , : );
-            prev_fjAData = Src{i}.fjAData( indexFjA-1 , : );           
-            fjBData = Src{i}.fjBData( indexFjB, : );
-            prev_fjBData = Src{i}.fjBData( indexFjB-1 , : );           
+            prev_muData = Src{i}.muData( indexMu-1 , : );    %前一天数据                   
             zsData = Src{i}.zsData( indexZs, : ); 
             
             if muData(muDailyTable.netValue) == 0   % 当天无母基金数据
                 continue;
             end
-            zsHsClose  = zsHs300(indexHs, 2);
-            if zsHsBgt == 0
-                zsHsBgt = zsHsClose;
+            % 先判断是否发生上下折           
+            openPriceM = prev_muData(muDailyTable.netValue); % 前一天的净值            
+            closePriceM = muData(muDailyTable.netValue); % 当天的净值
+            changeM = closePriceM/openPriceM - 1;           
+            if  changeM > 0.12
+                fprintf(['--(' num2str(date) ')基金 ' num2str(Src{i}.name) ' 发生下折\n']);
+                continue;
+            elseif changeM < -0.12
+                fprintf(['--(' num2str(date) ')基金 ' num2str(Src{i}.name) ' 发生上折\n']);
+                continue;
             end
             
             %计算实际折价率
@@ -174,10 +177,11 @@ for year = bgtyear:edtyear
             range = ticks(:,tickTable.time) >= date+begT & ticks(:,tickTable.time) < date+endT; %筛选尾盘数据
             StartIdx = find( range,1,'first');
             EndIdx = find( range,1,'last');
-            if( StartIdx >= EndIdx )   % 实际上为无数据
+            if( isempty( StartIdx ) )   % 实际上为无数据
                 continue;
             end
-            ticksDataA = ticks( StartIdx-1:EndIdx, : );     % 需要一个begT之前的交易数据，但未做下表越界检查，有可能出错。
+            StartIdx = max( StartIdx, 2 );  % 下表越界检查，保证StartIdx-1 > 0
+            ticksDataA = ticks( StartIdx-1:EndIdx, : );     % 需要一个begT之前的交易数据，极端情况下若不存在这个数据，用begT后出现的第一个数据替代。
             % 同理读B
             fileDir = [data_root '\ticks\' Src{i}.fjBName];
             fileDir2 = [fileDir '\' Src{i}.fjBName '_' num2str(Y) '_' num2str(M)];     % 进入都对应日期的目录
@@ -190,214 +194,157 @@ for year = bgtyear:edtyear
             range = ticks(:,tickTable.time) >= date+begT & ticks(:,tickTable.time) < date+endT; %筛选尾盘数据
             StartIdx = find( range,1,'first');
             EndIdx = find( range,1,'last');
-            if( StartIdx >= EndIdx )   % 实际上为无数据
+            if( isempty( StartIdx ) )   % 实际上为无数据
                 continue;
             end
-            ticksDataB = ticks( StartIdx-1:EndIdx, : );     % 需要一个begT之前的交易数据，但未做下表越界检查，有可能出错。
+            StartIdx = max( StartIdx, 2 );  % 下表越界检查，同上
+            ticksDataB = ticks( StartIdx-1:EndIdx, : );     % 需要一个begT之前的交易数据，同上。
             
-            extractTickNode( ticksDataA, ticksDataB, Src{i}.muName, predictNetValue, manager.holdings(i),Src{i}.shareA, Src{i}.shareB, date+begT );
+            tickNodes = extractTickNode( ticksDataA, ticksDataB, Src{i}.name, predictNetValue, manager.holdings(i),Src{i}.aShare, Src{i}.bShare, Src{i}.YjThresholds, Src{i}.ZjThresholds, date+begT );
+            allTicks = [allTicks; tickNodes ];
         end
-        
-        disEDay=[];     %溢价的日期  优先溢价（避免现金不够做折价），折价时先保存，最后排序后选择最大的做
-        yjEDay=[];      %折价的日期   
-        dailyRes = zeros( 1, resultTable.numOfEntries );   %每天的结果，就是Result中的一行
-        isTrade = 0;
-        RateRow = RateRow+1;
-        resDetial(:,RateRow, rateTable.date ) = date;
-        
-        %处理每一个种类的基金
-        for i = 1:srclen;
-            indexMu = find( Src{i}.muData(:,muDailyTable.date)==date);   
-            indexFjA = find( Src{i}.fjAData(:,fjDailyTable.date)==date);
-            indexFjB = find( Src{i}.fjBData(:,fjDailyTable.date)==date);
-            indexZs = find( Src{i}.zsData(:,idxDailyTable.date)==date);
-            indexHs = find( zsHs300(:,idxDailyTable.date)==date);  
-            if isempty(indexMu) || isempty(indexFjA) || isempty(indexZs) || isempty(indexFjB) || isempty(indexHs)
-               continue;
-            end
-            if indexMu <= 1 || indexFjA <= 1 || indexFjB <= 1 || indexZs <= 1 || indexHs <= 1
-                continue;
-            end
-            
-             % 设置局部变量           
-            muData = Src{i}.muData( indexMu , : );          %当天母基金数据
-            prev_muData = Src{i}.muData( indexMu-1 , : );    %前一天数据
-            
-            fjAData = Src{i}.fjAData( indexFjA , : );
-            prev_fjAData = Src{i}.fjAData( indexFjA-1 , : );
-            
-            fjBData = Src{i}.fjBData( indexFjB, : );
-            prev_fjBData = Src{i}.fjBData( indexFjB-1 , : );
-            
-            zsData = Src{i}.zsData( indexZs, : );
-            
-            
-            if muData(muDailyTable.netValue) == 0
-                continue;
-            end
-            zsHsClose  = zsHs300(indexHs, 2);
-            if zsHsBgt == 0
-                zsHsBgt = zsHsClose;
-            end
-            if isequal(Src{i}.fjBData(indexFjB,2),Src{i}.fjBData(indexFjB,3),Src{i}.fjBData(indexFjB,4),Src{i}.fjBData(indexFjB,5))%？？为什么要这样
-               continue;  
-            end
-            isTrade = 1;    %判断是交易日
-            %计算实际折价率
-              %预测当日净值
-            predictNetValue = prev_muData(muDailyTable.netValue)*(1+0.95*Src{i}.zsData(indexZs,3)/100);
-            %当天折价率，用当天收盘价来估算
-            disRate = (fjAData(fjDailyTable.closingPrice)*Src{i}.aShare+fjBData(fjDailyTable.closingPrice)*Src{i}.bShare - predictNetValue)/predictNetValue;
-            
-            % 前一天的净值信息
-            openPriceM = prev_muData(muDailyTable.netValue);
-            openPriceA = prev_fjAData(fjDailyTable.closingPrice);
-            openPriceB = prev_fjBData(fjDailyTable.closingPrice);
-            % 当天的净值信息
-            closePriceM = muData(muDailyTable.netValue);
-            closePriceA = fjAData(fjDailyTable.closingPrice);
-            closePriceB = fjBData(fjDailyTable.closingPrice);
-            changeM = closePriceM/openPriceM - 1;
-            
-            if closePriceM == 1 %上下折
-                if  changeM > 0.12
-                    disp([num2str(date) ' ' num2str(Src{i}.name) ' 下折']);
-                    continue;
-                elseif changeM < -0.12
-                    disp([num2str(date) ' ' num2str(Src{i}.name) ' 上折']);
-                    continue;
-                end
-            end
-            changeA = closePriceA/openPriceA - 1;
-            changeB = closePriceB/openPriceB - 1;
-            
-            if disRate > 0 %溢价先存起来
-
-                pre.rate = disRate;
-                pre.pos = i;
-                pre.cost = muData(muDailyTable.netValue)*(1+Src{i}.applyFee);
-                pre.sy = (fjAData(fjDailyTable.closingPrice)*Src{i}.aShare+fjBData(fjDailyTable.closingPrice)*Src{i}.bShare)*(1-Src{i}.stockFee-Src{i}.slipRate*slipRatio);
-                % 收益的计算，由卖出子基金A，B获得： sy = （子基金A，B总市值）*（1-股票交易手续费-滑点率*滑点比率）
-                % ！！！！！！！！！！！滑点率不应该提现在母基金上吗？
-                pre.syRate = (pre.sy-pre.cost)/pre.cost * assetManager2.CcRate();
-                
-                if changeA < -0.0995 || changeB < -0.0995
-                    disp([num2str(date) ' ' num2str(Src{i}.name) ' A或B跌停']);
-                    resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = pre.syRate; 
-                    dailyRes( resultTable.tradeLimitLeft ) = dailyRes( resultTable.tradeLimitLeft ) + pre.syRate;
-                    continue;
-                end               
-                yjEDay = [yjEDay pre];
-                resDetial( rDetialTable.ZYRate , RateRow, rateTable.date+i) = disRate;      %只要溢价就存ZYRate
-                if disRate > Src{i}.YjThresholds
-                    resDetial( rDetialTable.YjRate , RateRow, rateTable.date+i) = disRate;  %只有大于阈值，可套利才存YjRate
-                end
-            elseif disRate < Src{i}.ZjThresholds  %折价先保存，排序后再做
-                
-                dis.rate = disRate;
-                dis.rate_mins_thr = dis.rate - Src{i}.ZjThresholds;
-                dis.pos = i;
-                dis.cost = (fjAData(fjDailyTable.closingPrice)*Src{i}.aShare+fjBData(fjDailyTable.closingPrice)*Src{i}.bShare)*(1+Src{i}.stockFee+Src{i}.slipRate*slipRatio);
-                dis.sy = muData(muDailyTable.netValue)*(1-Src{i}.redeemFee);
-                dis.syRate = (dis.sy-dis.cost)/dis.cost * assetManager2.CcRate();
-                if changeA > 0.0995 || changeB > 0.0995
-                    disp([num2str(date) ' ' num2str(Src{i}.name) ' A或B涨停']);
-                    resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = dis.syRate;  
-                    dailyRes( resultTable.tradeLimitLeft ) = dailyRes( resultTable.tradeLimitLeft ) + dis.syRate;
-                    continue;
-                end
-                
-                disEDay = [disEDay dis];
-                resDetial( rDetialTable.ZYRate , RateRow, rateTable.date+i) = disRate;      %只有大于阈值，可套利才存ZYRate
-                resDetial( rDetialTable.ZjRate , RateRow, rateTable.date+i) = disRate;
-            else
-                continue;
-            end
-        end
-
-        if isTrade ~= 1 %有数据则表明是交易日,不是交易日则跳过
-            RateRow = RateRow - 1;
+        if isempty(allTicks)    % 今天没有可以套利的空间
             continue;
-        end       
-        
-        if ~isempty(yjEDay)
-            for j = 1:size(yjEDay,2);
-                item = yjEDay(j);
-                isOk = assetManager2.canDoYj(Src{item.pos}.name);
-                if isOk == 2    % 溢价是基本都可以做的，唯一不可以做的情况是没有子基金A,B的持仓（前一天为了做二倍折价而多合并了母基金）
-                    if item.rate > 0% 其实这个条件判断是多余的，因为 yjEDay里的肯定是溢价的
-                        disp(['split ' num2str(Src{item.pos}.name)]);
-                        assetManager2.doSpl(Src{item.pos}.name);    % 溢价情况下，多了母基金，则要拆分。
-                        resDetial( rDetialTable.FHRate , RateRow, rateTable.date+item.pos) = item.rate;
-                        resDetial( rDetialTable.FcRate , RateRow, rateTable.date+item.pos) = item.rate;
-                    end
-                    if item.rate > Src{item.pos}.YjThresholds      
-                        dailyRes( resultTable.yjRateLeft ) = dailyRes( resultTable.yjRateLeft ) + item.syRate;  % 超出阈值，可以做溢价套利，但是没有子基金而不能操作，溢价剩余收益累加加。
-                        
-                    end
-                elseif isOk == 1 && item.rate > Src{item.pos}.YjThresholds  
-                    assetManager2.doYj(Src{item.pos}.name);  %%！！TODO更新实时操作而导致资产状态变化
-                    dailyRes( resultTable.yjNum ) = dailyRes( resultTable.yjNum )+1;
-                    dailyRes( resultTable.yjRate ) = dailyRes( resultTable.yjRate ) + item.syRate;        % 套利率累加
-                    resDetial( rDetialTable.YjSyRate , RateRow, rateTable.date+item.pos) = item.syRate;
-                end
-            end
         end
-
-        if ~isempty(disEDay)    %有折价可以做
-            % 排序，默认按syRate的升序
-            [ascendRate, idx] = sort([disEDay.rate_mins_thr]);
-            disEDay = disEDay(idx);
+        [~, idx] = sort([allTicks.time]);   % 先按时间排序
+        allTicks = allTicks(idx);
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        used = zeros(srclen,1);         % 标记是否使用过
+        dailyRes = zeros(1, resultTable.numOfEntries);  % result Table 的一行.
+        numOfTicks = length( allTicks );
+        startIdx = 1;
+        while( startIdx <= numOfTicks )
+            endIdx = startIdx+1;
+            while( endIdx <= numOfTicks && allTicks(endIdx).time == allTicks(startIdx).time )
+                endIdx = endIdx+1;
+            end
+            secNodes = allTicks( startIdx:endIdx-1 ); % 提取出每一秒内所有的可盈利的交易方案            
+            % 先处理溢价的. premium
+            preNodes =  secNodes([secNodes.disRate] > 0);
+            for j = 1:length(preNodes)
+                node = preNodes(j);
+                [isOk, pos] = manager.canDoYj(node.code);
+                if used(pos)
+                    continue;
+                end          
+                used(pos) = 1;
+                % 计算收益率
+                indexMu = find( Src{pos}.muData(:,muDailyTable.date)==date);
+                netvalue = Src{pos}.muData(indexMu,muDailyTable.netValue);      % 取出当天母基金真实净值。
+                cost = netvalue * manager.holdings(pos) * (1 + Src{pos}.applyFee);
+                gain = ( node.fjAPrice*node.fjAVolume + node.fjBPrice*node.fjBVolume )*(1-Src{i}.stockFee-Src{i}.slipRate*slipRatio);
+                profitRate = (gain-cost)/manager.initAsset;
+                               
+                % 二倍折价时 溢价用于拆分，这里还需要考虑
+                if isOk == 2    % 溢价是基本都可以做的，唯一不可以做的情况是没有子基金A,B的持仓（前一天为了做二倍折价而多合并了母基金）
+                    if node.disRate > 0% 其实这个条件判断是多余的因为溢价肯定大于0的
+                        manager.doSpl(node.code);    % 溢价情况下，多了母基金，则要拆分。
+                        resDetial( rDetialTable.FHRate , ResultRowCnt, rateTable.date+pos) = node.disRate;
+                        resDetial( rDetialTable.FcRate , ResultRowCnt, rateTable.date+pos) = node.disRate;
+                    end
+                    if node.disRate > Src{pos}.YjThresholds    % 这个条件判断也是多余的，因为前面是大于阈值才保存下来的  
+                        dailyRes( resultTable.yjRateLeft ) = dailyRes( resultTable.yjRateLeft ) + profitRate;  % 超出阈值，可以做溢价套利，但是没有子基金而不能操作，溢价剩余收益累加加。                       
+                    end
+                elseif isOk == 1 % 后面这个条件多余就不判断了 && item.rate > Src{item.pos}.YjThresholds  
+                    manager.doYj(node.code, gain-cost);  %%！！TODO更新实时操作而导致资产状态变化
+                    dailyRes( resultTable.yjNum ) = dailyRes( resultTable.yjNum )+1;
+                    dailyRes( resultTable.yjRate ) = dailyRes( resultTable.yjRate ) + profitRate;        % 套利率累加
+                    resDetial( rDetialTable.YjSyRate , ResultRowCnt, rateTable.date+pos) = profitRate;
+                    % log
+                    format = [ '--(%d,%2d)申购母基金 %d(pred%.2f %.2f) \n' ...
+                        '%12s卖出分级A [%d %d %d %d %d][%.2f %.2f %.2f %.2f %.2f] \n' ...
+                        '%12s卖出分级B [%d %d %d %d %d][%.2f %.2f %.2f %.2f %.2f] \n' ...                    
+                        '%12s花费 %.2f, 盈利 %.2f, 收益 %.2f 总现金 %.2f\n' ];
+                    fprintf(format, date, node.time, node.code, netvalue, node.netvalue, ...
+                        '', node.fjAVolume, node.fjAPrice, ... 
+                        '', node.fjBVolume, node.fjBPrice, ... 
+                        '', cost, gain, gain-cost, manager.validMoney);
+                end                
+            end
             
-            for j = 1:size(disEDay,2);  %不做阈值判断？
-                item = disEDay(j);
-                isOk = assetManager2.canDoZj(Src{item.pos}.name);
+            % 再处理折价的. discount
+            disNodes =  secNodes([secNodes.disRate] < 0);
+            [~,idx] = sort( [disNodes.disRate] );   % 按折价率(绝对值)从大到小排序.
+            disNodes = disNodes( idx );
+            for j = 1:length(disNodes)                
+                node = disNodes(j);
+                cost = ( node.fjAPrice*node.fjAVolume + node.fjBPrice*node.fjBVolume )*(1-Src{i}.stockFee-Src{i}.slipRate*slipRatio);   % 花费
+                [isOk, pos] = manager.canDoZj(node.code,cost);
+                if used( pos )
+                    continue;
+                end
+                % 计算收益率
+                indexMu = find( Src{pos}.muData(:,muDailyTable.date)==date);
+                netvalue = Src{pos}.muData(indexMu,muDailyTable.netValue);      % 取出当天母基金真实净值。
+                gain = netvalue * manager.holdings(pos) * (1 + Src{pos}.applyFee);                
+                profitRate = (gain-cost)/manager.initAsset;
+                               
                 if isOk == 2
-                    dailyRes( resultTable.zjRatePlus ) = dailyRes( resultTable.zjRatePlus ) + item.syRate;  % 指二倍折价策略比一倍折价策略多出的收益？
+                    dailyRes( resultTable.zjRatePlus ) = dailyRes( resultTable.zjRatePlus ) + profitRate;  % 指二倍折价策略比一倍折价策略多出的收益？
                 end
                 if isOk > 0    %判断是否可以作zhe价操作 1或者2
                     zjNum = isOk;   
                     % 两倍折价
                     if zjType == 2
-                        if isOk == 1 && item.rate < -0.01   
+                        if isOk == 1 && node.disRate < -0.01   
                             zjNum = 2;
-                            resDetial( rDetialTable.FHRate , RateRow, rateTable.date+item.pos) = item.rate;
-                            resDetial( rDetialTable.HbRate , RateRow, rateTable.date+item.pos) = item.rate;
+                            resDetial( rDetialTable.FHRate , ResultRowCnt, rateTable.date+pos) = node.disRate;
+                            resDetial( rDetialTable.HbRate , ResultRowCnt, rateTable.date+pos) = node.disRate;
                         end
                     end
                     
-                    assetManager2.doZj(Src{item.pos}.name, zjNum);  % zjNum == 2 不表示可以做2倍折价，而是该折价操作后，T+1天拥有2倍持仓
+                    used( pos ) = 1;
+                    manager.doZj(Src{pos}.name, cost, gain, zjNum);  % zjNum == 2 不表示可以做2倍折价，而是该折价操作后，T+1天拥有2倍持仓
                     dailyRes( resultTable.zjNum ) = dailyRes( resultTable.zjNum )+1;
-                    dailyRes( resultTable.zjRate ) = dailyRes( resultTable.zjRate ) + item.syRate*isOk;
-                    resDetial( rDetialTable.ZjSyRate , RateRow, rateTable.date+item.pos) = item.syRate*isOk;
+                    dailyRes( resultTable.zjRate ) = dailyRes( resultTable.zjRate ) + profitRate*isOk;
+                    resDetial( rDetialTable.ZjSyRate , ResultRowCnt, rateTable.date+pos) = profitRate*isOk;
+                     % log
+                    format = [ '--(%d,%2d)赎回母基金 %d(pred%.2f %.2f) %d倍折价套利 \n' ...
+                        '%12s买入分级A [%d %d %d %d %d][%.2f %.2f %.2f %.2f %.2f] \n' ...
+                        '%12s买入分级B [%d %d %d %d %d][%.2f %.2f %.2f %.2f %.2f] \n' ...                    
+                        '%12s花费 %.2f, 盈利(冻结) %.2f, 收益 %.2f 总现金 %.2f\n' ];
+                    fprintf(format, date, node.time, node.code, node.netvalue, netvalue, isOk, ...
+                        '', node.fjAVolume, node.fjAPrice, ... 
+                        '', node.fjBVolume, node.fjBPrice, ... 
+                        '', cost*isOk, gain*isOk, (gain-cost)*isOk, manager.validMoney);
+                    
                 elseif isOk < 0   % 现金不够，不能做折价
                     dailyRes( resultTable.nomoneyNum ) = dailyRes( resultTable.nomoneyNum ) + 1;
-                    dailyRes( resultTable.zjRateLeft ) = dailyRes( resultTable.zjRateLeft ) - item.syRate*isOk;
-                    resDetial( rDetialTable.ZjKsRate , RateRow, rateTable.date+item.pos) = -1;  %表示现金不够不能做折价。
-                else        % isOK == 0;
-                    resDetial( rDetialTable.ZjKsRate , RateRow, rateTable.date+item.pos) = item.syRate;
-                    dailyRes( resultTable.zjRateFail ) = dailyRes( resultTable.zjRateFail ) + item.syRate;
-                end
-            end
+                    dailyRes( resultTable.zjRateLeft ) = dailyRes( resultTable.zjRateLeft ) - profitRate*isOk;
+                    resDetial( rDetialTable.ZjKsRate , ResultRowCnt, rateTable.date+pos) = -1;  %表示现金不够不能做折价。
+                else        % isOK == 0;前一天溢价，今天不能折价
+                    resDetial( rDetialTable.ZjKsRate , ResultRowCnt, rateTable.date+pos) = profitRate;
+                    dailyRes( resultTable.zjRateFail ) = dailyRes( resultTable.zjRateFail ) + profitRate;
+                end                  
+            end     
+            startIdx = endIdx;
         end
-
+        
+        indexHs = find( zsHs300(:,idxDailyTable.date)==date);  
+        zsHsClose  = zsHs300(indexHs, 2);
+        if zsHsBgt == 0
+            zsHsBgt = zsHsClose;
+        end
         dailyRes(resultTable.date) = date;
         dailyRes(resultTable.zsRate) = zsHsClose / zsHsBgt; 
-        dailyRes(resultTable.vilidVar) = assetManager2.typeNums;
-        dailyRes(resultTable.validMoney) = assetManager2.validMoney;
-        dailyRes(resultTable.regVar) = dailyRes(resultTable.regVar)/assetManager2.typeNums;            %必须每天标准化
+        % dailyRes(resultTable.vilidVar) = manager.typeNums;
+        dailyRes(resultTable.validMoney) = manager.validMoney;
+        % dailyRes(resultTable.regVar) = dailyRes(resultTable.regVar)/assetManager2.typeNums;            %必须每天标准化
         
         Result(ResultRowCnt,:) = dailyRes;
         Result(ResultRowCnt,resultTable.cumVar ) = Result(ResultRowCnt-1,resultTable.cumVar )+Result(ResultRowCnt,resultTable.cumVar );       
         ResultRowCnt= ResultRowCnt+1;
         
-        assetManager2.updateState();      %每日交易结束，模拟证券公司操作，更新资产状态
-    end    
+        manager.updateState();      %每日交易结束，模拟证券公司操作，更新资产状态       
+    end
+    manager.updateState();  % 回收最后一天冻结的资金
+    diary off;
+    
     Result(:,resultTable.tlRate) = Result(:,resultTable.yjRate) + Result(:,resultTable.zjRate); %totalTlRate = yjRate + zjRate; 总的套利率等于溢价套利率加上折价套利率 
     Result(:,resultTable.opNum) = Result(:,resultTable.yjNum) + Result(:,resultTable.zjNum);    %opNum = yjNums + zjNums;       总的套利次数等于溢价套利次数加上折价套利次数
     Result(1,:) = []; %删除第一行
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     tradeDays = size(Result,1);
     timesDuration = Result(end,1)-bgt+1;
@@ -450,17 +397,12 @@ for year = bgtyear:edtyear
 
     configFile = 'config';
     saveDir = ['..\result\折溢价率\' configFile '_' num2str(slipRatio) '倍滑点_持仓比' num2str(handleRate(1)) '-' num2str(handleRate(2))];
-    if (selectMode == 1)
-        saveDir = [saveDir '选择品种'];
-    end
     if exist(saveDir,'dir') == 0
         mkdir(saveDir);
     end
     figurePath = [saveDir '\' fTitle '_' num2str(year) '.bmp'];
     set(gcf,'outerposition',get(0,'screensize'));
     saveas( gcf, figurePath );
-    %RD = resDetial( rDetialTable.ZYRate,:,:);
-    %RD = squeeze(RD);
     save_path = [saveDir '\' num2str(year) 'Result'];
     sheet = 1;   
     xlswrite( save_path, resultTable.listHeader, sheet);   % 确保文件名中不存在字符'.'

@@ -1,4 +1,4 @@
-function tickNodes = extractTickNode(ticksDataA,ticksDataB, muName, netvalue, holding, shareA, shareB, YjThresholds, ZjThresholds, referenceTime )
+function tickNodes = extractTickNode(ticksDataA,ticksDataB, muCode, netvalue, holding, shareA, shareB, YjThresholds, ZjThresholds, referenceTime )
     % 定义常量
     constSec = 1/24/60/60;
     global tickTable;
@@ -34,17 +34,17 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, muName, netvalue, ho
             continue;
         end
         idx = 1;
-        sumA = sum( buyAVolume );
+        leftA = fjAHolding;     % leftA 是基金A仍需要购入的份数
         while( idx < 6 )
-            buyAVolume(idx) = min(buyAVolume(idx), sumA);
-            sumA = sumA -  buyAVolume(idx);
+            buyAVolume(idx) = min(buyAVolume(idx), leftA);
+            leftA = leftA -  buyAVolume(idx);
             idx = idx + 1;
         end
         idx = 1;
-        sumB = sum( buyBVolume );
+        leftB = fjBHolding;
         while( idx < 6 )
-            buyBVolume(idx) = min(buyBVolume(idx), sumB);
-            sumB = sumB -  buyBVolume(idx);
+            buyBVolume(idx) = min(buyBVolume(idx), leftB);
+            leftB = leftB -  buyBVolume(idx);
             idx = idx + 1;
         end
         buyA = buyAVolume/fjAHolding; % 归一化
@@ -52,16 +52,55 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, muName, netvalue, ho
         disRate = curA(tickTable.buyPrice)*buyA*shareA + curB(tickTable.buyPrice)*buyB*shareB - netvalue ;  % 等效折溢价率
         if disRate > YjThresholds   % 可以做溢价
             node = TickNode;
+            node.code = muCode;
+            node.netvalue = netvalue;
+            node.fjAPrice = curA(tickTable.buyPrice);
+            node.fjAVolume = buyAVolume;
+            node.fjBPrice = curB(tickTable.buyPrice);
+            node.fjBVolume = buyBVolume;
+            node.time = sec;
+            node.disRate = disRate;
+            tickNodes = [tickNodes; node];
+            continue;   % 可以做溢价就不可能做折价了,进入下一秒的判断
         end
         %profit = curA(tickTable.buyPrice)*buyAVolume + curB(tickTable.buyPrice)*buyBVolume - netvalue*holding ;
         
-    end
-        
-%     for i = 1:size(ticksData,1)
-%         node.t = round( (ticksData(i,tickTable.time) - referenceTime)/constSec);
-%         
-%         buyVolumeA = ticksData(i,tickTable.buyVolume);
-%         if( sum( buyVolume ) < fjHolding 
+        % 判断是否可以做折价
+        saleAVolume = curA( tickTable.saleVolume )';  % 向量默认为列向量
+        saleBVolume = curB( tickTable.saleVolume )';
+        if( sum( saleAVolume ) < fjAHolding || sum( saleBVolume ) < fjBHolding )  % 五档挂牌量不够
+            continue;
+        end
+        idx = 1;
+        leftA = fjAHolding;
+        while( idx < 6 )
+            saleAVolume(idx) = min(saleAVolume(idx), leftA);
+            leftA = leftA -  saleAVolume(idx);
+            idx = idx + 1;
+        end
+        idx = 1;
+        leftB = fjBHolding;
+        while( idx < 6 )
+            saleBVolume(idx) = min(saleBVolume(idx), leftB);
+            leftB = leftB -  saleBVolume(idx);
+            idx = idx + 1;
+        end
+        saleA = saleAVolume/fjAHolding; % 归一化
+        saleB = saleBVolume/fjBHolding;
+        disRate = curA(tickTable.salePrice)*saleA*shareA + curB(tickTable.salePrice)*saleB*shareB - netvalue ;  % 等效折溢价率
+        if disRate < ZjThresholds   % 可以做溢价
+            node = TickNode;
+            node.code = muCode;
+            node.netvalue = netvalue;
+            node.fjAPrice = curA(tickTable.salePrice);
+            node.fjAVolume = saleAVolume;
+            node.fjBPrice = curB(tickTable.salePrice);
+            node.fjBVolume = saleBVolume;
+            node.time = sec;
+            node.disRate = disRate;
+            tickNodes = [tickNodes; node];
+        end        
+    end        
             
 end           
     
