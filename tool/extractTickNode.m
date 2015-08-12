@@ -1,4 +1,12 @@
-function tickNodes = extractTickNode(ticksDataA,ticksDataB, muCode, netvalue, holding, shareA, shareB, YjThresholds, ZjThresholds, referenceTime )
+function tickNodes = extractTickNode(ticksDataA,ticksDataB, netvalue, manager, i, referenceTime )
+   
+    % 变量别名
+    muCode = manager.Info(i).name;
+    holding = manager.holdings(i);
+    shareA = manager.Info(i).aShare;
+    shareB = manager.Info(i).bShare;
+    ZjThresholds = manager.Info(i).ZjThresholds;
+    
     % 定义常量
     constSec = 1/24/60/60;
     global tickTable;
@@ -49,8 +57,8 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, muCode, netvalue, ho
         end
         buyA = buyAVolume/fjAHolding; % 归一化
         buyB = buyBVolume/fjBHolding;
-        disRate = curA(tickTable.buyPrice)*buyA*shareA + curB(tickTable.buyPrice)*buyB*shareB - netvalue ;  % 等效折溢价率
-        if disRate > YjThresholds   % 可以做溢价
+        preRate = curA(tickTable.buyPrice)*buyA*shareA + curB(tickTable.buyPrice)*buyB*shareB - netvalue ;  % 等效折溢价率
+        if preRate > 0 % 大于0而不是大于YjThresholds 是因为要确定拆分时机
             node = TickNode;
             node.code = muCode;
             node.netvalue = netvalue;
@@ -59,7 +67,7 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, muCode, netvalue, ho
             node.fjBPrice = curB(tickTable.buyPrice);
             node.fjBVolume = buyBVolume;
             node.time = sec;
-            node.disRate = disRate;
+            node.rate = preRate;
             tickNodes = [tickNodes; node];
             continue;   % 可以做溢价就不可能做折价了,进入下一秒的判断
         end
@@ -88,7 +96,7 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, muCode, netvalue, ho
         saleA = saleAVolume/fjAHolding; % 归一化
         saleB = saleBVolume/fjBHolding;
         disRate = curA(tickTable.salePrice)*saleA*shareA + curB(tickTable.salePrice)*saleB*shareB - netvalue ;  % 等效折溢价率
-        if disRate < ZjThresholds   % 可以做溢价
+        if disRate < ZjThresholds   % 可以做折价
             node = TickNode;
             node.code = muCode;
             node.netvalue = netvalue;
@@ -97,7 +105,7 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, muCode, netvalue, ho
             node.fjBPrice = curB(tickTable.salePrice);
             node.fjBVolume = saleBVolume;
             node.time = sec;
-            node.disRate = disRate;
+            node.rate = disRate;
             tickNodes = [tickNodes; node];
         end        
     end        

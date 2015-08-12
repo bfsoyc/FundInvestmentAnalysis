@@ -143,11 +143,12 @@ global turnoverTHeader;
     resultTable.zjRateFail = 14;        %昨日溢价导致今日无法折价
     resultTable.validMoney = 15;
     resultTable.tradeLimitLeft = 16;    % 因为涨跌停导致的剩余价值
-    resultTable.numOfEntries = 16;     %该变量记录result表格的列数
+    resultTable.holdingValue = 17;      % 持仓价值
+    resultTable.numOfEntries = 17;     %该变量记录result表格的列数
     
     resultTable.listHeader = {'日期','累计总套利率','zsRate','当前品总数','操作数','溢价操作数','折价操作数','资金缺乏数',...
         '累计套利率剩余价值','二倍折价套利额外收益','二倍折价套利溢价减益','折价套利率','溢价套利率','折价Fail',...
-        '现金数','涨跌停剩余价值'};
+        '现金数','涨跌停剩余价值','持仓基金价值总量'};
     %记录所有累加的变量cumulative variable :非直接统计量不放在下表，如opNum
     resultTable.cumVar = [ resultTable.yjRate resultTable.zjRate resultTable.zjRateLeft resultTable.zjRatePlus resultTable.yjRateLeft resultTable.zjRateFail resultTable.tradeLimitLeft ]; 
     %记录所有需要标准化的变量（即除以assetManager2.typeNums） regularization variable;

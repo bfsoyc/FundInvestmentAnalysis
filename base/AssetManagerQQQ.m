@@ -2,8 +2,8 @@
 % ¸ÃÀàÓÃÓÚÄ£Äâ½»Ò×µÄ×Ê½ğ¹ÜÀí£¬°üº¬ÁËÕÛÒç¼Û²Ù×÷µÄËùÓĞ·½·¨
 %   method:
 %       ĞÂÔöÆ·ÖÖ
-%       isOk = addTypes(obj,OF, w, netvalue )
-%           OF: CellÊı×é,Ã¿Ò»¸öµ¥Ôª´ú±íÒ»¸ö»ù½ğ´úÂë
+%       isOk = addTypes(obj, configInfo, w , netvalue )
+%           configInfo: °üº¬Ä¸»ù½ğµÄĞÅÏ¢.
 %           w: ¹éÒ»»¯È¨ÖØ
 %           netvalue: ½¨²Öµ±ÌìÄ¸»ù½ğ¾»Öµ
 %
@@ -24,6 +24,10 @@
 %       ½øĞĞÒç¼Û²Ù×÷
 %       doYj(obj, OF, profit)
 %           profit: ±¾´Î²Ù×÷µÄÓ¯Àû¶î£¬ profit = gain - cost
+%
+%       ²ğ·ÖÄ¸»ù½ğ£¬µ± canDoYj(obj,OF) ·µ»ØµÄisOKÎª2Ê±£¬¼´Ó¦µ÷ÓÃ¸Ãº¯Êı½øĞĞ²ğ·Ö²Ù×÷
+%       doSpl(obj,OF)
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á¬ĞøÕÛ¼ÛÊ±£¬½«ËùÓĞ2/3µÄ×Ê½ğ¶¼Ö±½Ó³Ö²ÖÄ¸»ù½ğ½øĞĞÌ×Àû
@@ -36,6 +40,8 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á
         shMoney
         shMoneyFreez
         validMoney    %¿ÉÓÃ×Ê½ğ
+        
+        Info            % Æ·ÖÖĞÅÏ¢
     end
     
     properties( Dependent )
@@ -49,6 +55,7 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á
             obj.handleRate = handleRate;
             obj.holdings = [];
             obj.types = [];
+            obj.Info = [];
             obj.typeNums = 0;
             obj.shMoneyFreez = 0;
             obj.shMoney = 0;
@@ -56,27 +63,18 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á
             fprintf('-³õÊ¼»¯ Í¶Èë×Ê½ğ %d.\n', obj.validMoney );
         end
         
-        function isOk = addTypes(obj, OF, w , netvalue )
-            len = length(OF);
-            if len < 1 
-                isOk=-1; 
-                return;
-            end
-            if len ~= length(w) && len ~= length(netvalue)
-                error('ÊäÈëÊı×éÎ¬¶È²»Ò»ÖÂ');
-            end
+        function isOk = addTypes(obj, configInfo, w , netvalue )
+            obj.types = [obj.types Type(configInfo.name)];
+            obj.Info = [obj.Info configInfo];
+            holding = obj.initAsset * obj.handleRate * w / 2 / netvalue;      % ¼ÆËã¹ºÂòµÄ·İ¶î
+            holding = bitset( floor( holding ),1,0);                          % ·İ¶î±ØĞëÊÇÕûÊı,¶øÇÒÊÇÅ¼Êı, ½«×îºóÒ»Î»ÖÃ0
+            obj.holdings = [obj.holdings holding];
+            obj.validMoney = obj.validMoney - netvalue * holding * 2;            
+            obj.typeNums = obj.typeNums + 1;
+            isOk=1; 
             
-            for i = 1:len;
-                obj.types = [obj.types Type(OF(i))];
-                holding = obj.initAsset * obj.handleRate * w(i) / 2 / netvalue; % ¼ÆËã¹ºÂòµÄ·İ¶î
-                holding = bitset( floor( holding ),1,0);                          % ·İ¶î±ØĞëÊÇÕûÊı,¶øÇÒÊÇÅ¼Êı, ½«×îºóÒ»Î»ÖÃ0
-                obj.holdings = [obj.holdings holding];
-                obj.validMoney = obj.validMoney - netvalue * holding * 2;
-                % log 
-                fprintf('--½¨²Ö¹ºÈë %d£¨È¨ÖØ£º%.2f£© %d ·İ£¨¾»Öµ%f£©, Ê£ÓàÏÖ½ğ %f .\n', OF(i),w(i), holding, netvalue, obj.validMoney );
-            end
-            obj.typeNums = obj.typeNums + len;
-            isOk=1;            
+            % log 
+            fprintf('--½¨²Ö¹ºÈë %d£¨È¨ÖØ£º%.2f£© %d ·İ£¨¾»Öµ%f£©, Ê£ÓàÏÖ½ğ %f .\n', configInfo.name,w, holding, netvalue, obj.validMoney );
         end        
             
         %Ã¿ÈÕ½»Ò×½áÊøºó£¬¸üĞÂÄ¸»ù½ğ×´Ì¬
@@ -139,6 +137,7 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á
                     obj.shMoneyFreez = obj.shMoneyFreez + retrive;
                 end
                 obj.types(pos).curOp = Type.ZHEJIA2;%ºÏ²¢AB·İ¶î*2£¬µ«¿ÉÄÜÊÇÖ»Ì×ÀûÁËÒ»·İÄ¸»ù½ğ£¬Ò²¿ÉÄÜÌ×ÀûÁËÁ½·İÄ¸»ù½ğ£¬µÃÊÓÇ°Ò»½»Ò×ÈÕµÄ¾ßÌåÇé¿ö
+                
             end
         end
         
@@ -167,6 +166,7 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ğºÍ·Ö¼¶×Ê½ğµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ğ£¬Á
         function doSpl(obj,OF)  %%·Ö²ğÒ»°ëÄ¸»ù½ğ
             pos = obj.find(OF);
             obj.types(pos).curOp = Type.YIJIA2;
+            % log
             fprintf('--Ä¸»ù½ğ %d ²ğ·Ö\n', OF ); 
         end
         %²éÑ¯Ö¸¶¨Æ·ÖÖÔÚtypesÊı×éÖĞµÄÎ»ÖÃ
