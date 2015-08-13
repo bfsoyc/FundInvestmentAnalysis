@@ -21,7 +21,7 @@ function multiAnalyzeModel()
     handleRate = [2 3];%2/3、2/4持仓
     zjType =2;     %折价类型 一倍，两倍……
     slipRatio = 0;  %N倍滑点率，0时代表不考虑滑点
-    configFile = '\config滤流动性.csv';
+    configFile = '\config7_30.csv';
 
 
     [selectFund,weight] = getSelectionFund();
@@ -132,12 +132,21 @@ for year = bgtyear:edtyear
              % 设置局部变量           
             muData = Src{i}.muData( indexMu , : );          %当天母基金数据
             prev_muData = Src{i}.muData( indexMu-1 , : );    %前一天数据
+            if prev_muData( muDailyTable.date ) ~= date-1
+                continue;
+            end
             
             fjAData = Src{i}.fjAData( indexFjA , : );
             prev_fjAData = Src{i}.fjAData( indexFjA-1 , : );
+            if prev_fjAData( fjDailyTable.date ) ~= date-1
+                continue;
+            end
             
             fjBData = Src{i}.fjBData( indexFjB, : );
             prev_fjBData = Src{i}.fjBData( indexFjB-1 , : );
+            if prev_fjBData( fjDailyTable.date ) ~= date-1
+                continue;
+            end
             
             zsData = Src{i}.zsData( indexZs, : );
             
@@ -197,8 +206,8 @@ for year = bgtyear:edtyear
                 
                 if changeA < -0.0995 || changeB < -0.0995
                     disp([num2str(date) ' ' num2str(Src{i}.name) ' A或B跌停']);
-                    resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = pre.syRate; 
-                    dailyRes( resultTable.tradeLimitLeft ) = dailyRes( resultTable.tradeLimitLeft ) + pre.syRate;
+                    resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = pre.syRate + 1 ; % 为了将折价与溢价区别开来 
+                    dailyRes( resultTable.tradeLimitLeft ) = dailyRes( resultTable.tradeLimitLeft ) + pre.syRate ;
                     continue;
                 end               
                 yjEDay = [yjEDay pre];
@@ -216,7 +225,7 @@ for year = bgtyear:edtyear
                 dis.syRate = (dis.sy-dis.cost)/dis.cost * assetManager.CcRate();
                 if changeA > 0.0995 || changeB > 0.0995
                     disp([num2str(date) ' ' num2str(Src{i}.name) ' A或B涨停']);
-                    resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = dis.syRate;  
+                    resDetial( rDetialTable.TradeLimit, RateRow, rateTable.date+i) = dis.syRate + 2;  
                     dailyRes( resultTable.tradeLimitLeft ) = dailyRes( resultTable.tradeLimitLeft ) + dis.syRate;
                     continue;
                 end
@@ -362,8 +371,7 @@ for year = bgtyear:edtyear
     legend('套利净值', '沪深300', '资金总净值', '折价套利剩余空间', '二倍折价额外收益', '二倍折价溢价减益','涨跌停剩余收益率', -1);
 
 
-    configFile = 'config';
-    saveDir = ['..\result\折溢价率\' configFile '_' num2str(slipRatio) '倍滑点_持仓比' num2str(handleRate(1)) '-' num2str(handleRate(2))];
+    saveDir = ['..\result\折溢价率' configFile(1:end-4) '_' num2str(slipRatio) '倍滑点_持仓比' num2str(handleRate(1)) '-' num2str(handleRate(2))];
     if (selectMode == 1)
         saveDir = [saveDir '选择品种'];
     end
