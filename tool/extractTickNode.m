@@ -32,14 +32,32 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, netvalue, manager, i
         if timeListA(sec,1)   % 这一秒分级A有交易记录，更新当前A的行情
             curA = timeListA(sec,:);  
         end
-        if timeListB(sec,1)
+        if timeListB(sec,1)           
             curB = timeListB(sec,:);
         end
         % 判断是否可以做溢价
+        node = TickNode;
         buyAVolume = curA( tickTable.buyVolume )';  % 向量默认为列向量
         buyBVolume = curB( tickTable.buyVolume )';
+        buyAPrice = curA(tickTable.buyPrice);
+        buyBPrice = curB(tickTable.buyPrice);
         if( sum( buyAVolume ) < fjAHolding || sum( buyBVolume ) < fjBHolding )  % 五档挂牌量不够
-            continue;
+            if sum( buyAVolume ) == 0   % A没有买入挂牌，说明A跌停
+                buyAVolume = tickTable.INFVolume;
+                buyAPrice = curA(tickTable.salePrice); % 跌停时用卖一价来替代原来的买一价。
+                if buyAPrice(1) == 0    % 这个数据都没有就没辙了
+                    continue;
+                end
+            elseif sum( buyBVolume ) == 0 % 没有卖出挂牌，说明跌停
+                buyBVolume = tickTable.INFVolume;
+                buyBPrice = curB(tickTable.salePrice); % 跌停时用卖一价来替代原来的买一价。
+                if buyBPrice(1) == 0    % 这个数据都没有就没辙了
+                    continue;
+                end
+            else
+                continue;
+            end
+            node.tradeLimitFlag = 1;
         end
         idx = 1;
         leftA = fjAHolding;     % leftA 是基金A仍需要购入的份数
@@ -57,14 +75,14 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, netvalue, manager, i
         end
         buyA = buyAVolume/fjAHolding; % 归一化
         buyB = buyBVolume/fjBHolding;
-        preRate = curA(tickTable.buyPrice)*buyA*shareA + curB(tickTable.buyPrice)*buyB*shareB - netvalue ;  % 等效折溢价率
+        preRate = buyAPrice*buyA*shareA + buyBPrice*buyB*shareB - netvalue ;  % 等效折溢价率
         if preRate > 0 % 大于0而不是大于YjThresholds 是因为要确定拆分时机
-            node = TickNode;
+            
             node.code = muCode;
             node.netvalue = netvalue;
-            node.fjAPrice = curA(tickTable.buyPrice);
+            node.fjAPrice = buyAPrice;
             node.fjAVolume = buyAVolume;
-            node.fjBPrice = curB(tickTable.buyPrice);
+            node.fjBPrice = buyBPrice;
             node.fjBVolume = buyBVolume;
             node.time = sec;
             node.rate = preRate;
@@ -74,10 +92,28 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, netvalue, manager, i
         %profit = curA(tickTable.buyPrice)*buyAVolume + curB(tickTable.buyPrice)*buyBVolume - netvalue*holding ;
         
         % 判断是否可以做折价
+        node = TickNode;
         saleAVolume = curA( tickTable.saleVolume )';  % 向量默认为列向量
         saleBVolume = curB( tickTable.saleVolume )';
+        saleAPrice = curA(tickTable.salePrice);
+        saleBPrice = curB(tickTable.salePrice);
         if( sum( saleAVolume ) < fjAHolding || sum( saleBVolume ) < fjBHolding )  % 五档挂牌量不够
-            continue;
+            if sum( saleAVolume ) == 0   % A没有卖出挂牌，说明A涨停
+                saleAVolume = tickTable.INFVolume;
+                saleAPrice = curA(tickTable.buyPrice); % 跌停时用卖一价来替代原来的买一价。
+                if saleAPrice(1) == 0    % 这个数据都没有就没辙了
+                    continue;
+                end
+            elseif sum( saleBVolume ) == 0 % 没有卖出挂牌，说明跌停
+                saleBVolume = tickTable.INFVolume;
+                saleBPrice = curB(tickTable.buyPrice); % 跌停时用卖一价来替代原来的买一价。
+                if saleBPrice(1) == 0    % 这个数据都没有就没辙了
+                    continue;
+                end
+            else
+                continue;               % 实在是交易量不足，放弃。
+            end
+            node.tradeLimitFlag = 1;
         end
         idx = 1;
         leftA = fjAHolding;
@@ -95,14 +131,13 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, netvalue, manager, i
         end
         saleA = saleAVolume/fjAHolding; % 归一化
         saleB = saleBVolume/fjBHolding;
-        disRate = curA(tickTable.salePrice)*saleA*shareA + curB(tickTable.salePrice)*saleB*shareB - netvalue ;  % 等效折溢价率
+        disRate = saleAPrice*saleA*shareA + saleBPrice*saleB*shareB - netvalue ;  % 等效折溢价率
         if disRate < ZjThresholds   % 可以做折价
-            node = TickNode;
             node.code = muCode;
             node.netvalue = netvalue;
-            node.fjAPrice = curA(tickTable.salePrice);
+            node.fjAPrice = saleAPrice;
             node.fjAVolume = saleAVolume;
-            node.fjBPrice = curB(tickTable.salePrice);
+            node.fjBPrice = saleBPrice;
             node.fjBVolume = saleBVolume;
             node.time = sec;
             node.rate = disRate;

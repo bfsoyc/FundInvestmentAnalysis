@@ -161,11 +161,13 @@ global turnoverTHeader;
     tickTable.increase = 3;
     tickTable.tradeVolume = 4;
     tickTable.turnover = 5;
-    tickTable.buyPrice = [8 9 10 11 12];        % 这个购入价是市场挂牌买入的加价，及我们卖出的价格。
+    tickTable.buyPrice = [8 9 10 11 12];        % 这个购入价是市场挂牌买入的加价，即我们卖出的价格。
     tickTable.salePrice = [13 14 15 16 17];
     tickTable.buyVolume = [18 19 20 21 22];
     tickTable.saleVolume = [23 24 25 26 27];
     tickTable.maxEntry = 27;    % 最大的索引下标
+    
+    tickTable.INFVolume = [1e10 1e10 1e10 1e10 1e10]';  %列向量保存
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     rDetialTable.ZYRate = 1;

@@ -64,7 +64,7 @@ for k = 2:tableLen     %第一行是表头
         %读取母基金，其分级基金A、B，以及对应指数的相关数据：每日净值、涨幅等等
         temp.data.muData = csvread(['G:\datastore\母基金1\' muName,'.csv']);
         temp.data.fjAData = csvread(['G:\datastore\日线1\' fjAName  '.csv']);
-        temp.data.fjBData = csvread(['G:\datastore\日线1\' fjBName  '.csv']);
+        temp.data.fjBData = csvread(['G:\datastore\日线1\' fjBName  '.csv']);      
         temp.data.zsData = csvread(['G:\datastore\日线1\' zsName  '.csv']);
         temp.configInfo = ConfigInfo;
         temp.configInfo.name = muCode;  
@@ -122,9 +122,7 @@ for year = bgtyear:edtyear
     ResultRowCnt = 2;                %Result 表格的行计数器 从第二行开始
     zsHsBgt = 0;
     zsHsClose = 0;
-    
-    
-    
+     
     %按日计算
     for date = bgt+1:edt % 确保取到昨日净值
         resDetial(:,ResultRowCnt, rateTable.date ) = date;
@@ -149,7 +147,7 @@ for year = bgtyear:edtyear
             end
             % 设置变量别名           
             muData = Src{i}.data.muData( indexMu , : );          %当天母基金数据
-            prev_muData = Src{i}.data.muData( indexMu-1 , : );    %前一天数据                   
+            prev_muData = Src{i}.data.muData( indexMu-1 , : );    %前一天数据    
             zsData = Src{i}.data.zsData( indexZs, : ); 
             
             if muData(muDailyTable.netValue) == 0   % 当天无母基金数据
@@ -246,7 +244,13 @@ for year = bgtyear:edtyear
                 slipRatio = manager.Info(i).slipRate*slipRatio; 
                 gain = ( node.fjAPrice*node.fjAVolume + node.fjBPrice*node.fjBVolume )*(1 - stockFee - slipRatio);   % 收益，手续费要减
                 profitRate = (gain-cost)/manager.initAsset;
-                               
+                       
+                if node.tradeLimitFlag == 1 % 如果是涨跌停
+                    resDetial( rDetialTable.TradeLimit, ResultRowCnt, rateTable.date+i) = profitRate;  
+                    dailyRes( resultTable.tradeLimitLeft ) = dailyRes( resultTable.tradeLimitLeft ) + profitRate;
+                    fprintf('--(%d,%2d)母基金 %d 对应的分级基金出现涨跌停\n', date, node.time, node.code ); 
+                    continue;
+                end               
                 % 二倍折价时 溢价用于拆分
                 YjThresolds = manager.Info(pos).YjThresholds;
                 if isOk == 2    % 溢价是基本都可以做的，唯一不可以做的情况是没有子基金A,B的持仓（前一天为了做二倍折价而多合并了母基金）
@@ -282,6 +286,7 @@ for year = bgtyear:edtyear
             
             [~,idx] = sort( [disNodes.rate] );   % 按折价率(绝对值)从大到小排序.
             disNodes = disNodes( idx );
+            
             for j = 1:length(disNodes)                
                 node = disNodes(j);
                 if node.time < prevOpTime + 5    % 距离上一次折价操作不足5秒
@@ -301,7 +306,13 @@ for year = bgtyear:edtyear
                 redeemFee = manager.Info(pos).redeemFee;
                 gain = netvalue * manager.holdings(pos) * (1 - redeemFee);                
                 profitRate = (gain-cost)/manager.initAsset;
-                               
+                                   
+                if node.tradeLimitFlag == 1 % 如果是涨跌停
+                    resDetial( rDetialTable.TradeLimit, ResultRowCnt, rateTable.date+i) = profitRate;  
+                    dailyRes( resultTable.tradeLimitLeft ) = dailyRes( resultTable.tradeLimitLeft ) + profitRate;
+                    fprintf('--(%d,%2d)母基金 %d 对应的分级基金出现涨跌停\n', date, node.time, node.code ); 
+                    continue;
+                end     
                 if isOk == 2
                     dailyRes( resultTable.zjRatePlus ) = dailyRes( resultTable.zjRatePlus ) + profitRate;  % 指二倍折价策略比一倍折价策略多出的收益？
                 end

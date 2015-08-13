@@ -67,7 +67,16 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ðºÍ·Ö¼¶×Ê½ðµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ð£¬Á
             obj.types = [obj.types Type(configInfo.name)];
             obj.Info = [obj.Info configInfo];
             holding = obj.initAsset * obj.handleRate * w / 2 / netvalue;      % ¼ÆËã¹ºÂòµÄ·Ý¶î
-            holding = bitset( floor( holding ),1,0);                          % ·Ý¶î±ØÐëÊÇÕûÊý,¶øÇÒÊÇÅ¼Êý, ½«×îºóÒ»Î»ÖÃ0
+            tmp = floor( holding/100 );
+            % ¼ÆËãA B ·Ý¶î×î¼òÕûÊý±È
+            G = gcd( int32(configInfo.aShare), int32(configInfo.bShare) );
+            aS = configInfo.aShare/G;
+            bS = configInfo.bShare/G;
+            % È·±£A B¾ùÄÜ±»100Õû³ý( A B·Ý¶îµÄÔ¼Êý:aS,bSÊÇtmpµÄÔ¼Êý¼´¿É)
+            M = mod(tmp, aS+bS);
+            tmp = tmp - M;
+            holding = double(tmp * 100);
+          
             obj.holdings = [obj.holdings holding];
             obj.validMoney = obj.validMoney - netvalue * holding * 2;            
             obj.typeNums = obj.typeNums + 1;

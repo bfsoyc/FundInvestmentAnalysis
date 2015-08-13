@@ -9,9 +9,14 @@ classdef TickNode
         fjBPrice;
         fjBVolume;
         
+        tradeLimitFlag;  % 涨跌停标识
         time;
         rate;            % 折合折溢价率
     end
     
-    
+    methods
+        function obj = TickNode()
+            obj.tradeLimitFlag = 0;
+        end
+    end
 end
