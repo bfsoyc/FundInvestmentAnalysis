@@ -131,20 +131,17 @@ for year = bgtyear:edtyear
             
              % 设置局部变量           
             muData = Src{i}.muData( indexMu , : );          %当天母基金数据
-            prev_muData = Src{i}.muData( indexMu-1 , : );    %前一天数据
-            if prev_muData( muDailyTable.date ) ~= date-1
-                continue;
-            end
+            prev_muData = Src{i}.muData( indexMu-1 , : );    %前一天数据 默认母基金是连续的
             
             fjAData = Src{i}.fjAData( indexFjA , : );
             prev_fjAData = Src{i}.fjAData( indexFjA-1 , : );
-            if prev_fjAData( fjDailyTable.date ) ~= date-1
+            if prev_fjAData( fjDailyTable.date ) ~= prev_muData( muDailyTable.date )
                 continue;
             end
             
             fjBData = Src{i}.fjBData( indexFjB, : );
             prev_fjBData = Src{i}.fjBData( indexFjB-1 , : );
-            if prev_fjBData( fjDailyTable.date ) ~= date-1
+            if prev_fjBData( fjDailyTable.date ) ~= prev_muData( muDailyTable.date )
                 continue;
             end
             
