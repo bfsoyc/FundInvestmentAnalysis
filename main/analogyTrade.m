@@ -31,8 +31,9 @@ slipRatio = 0;  %N倍滑点率，0时代表不考虑滑点
 
 save_root = '..\result';
 data_root = 'G:\datastore';
-configFile = '\config7_30.csv';
-[selectFund,w] = getSelectionFund();
+configFile = '\config彭.csv';
+%[~,w] = getSelectionFund();
+w = [1 1 1];
 w = w/sum(w);
 
 %%  读取数据
@@ -245,6 +246,7 @@ for year = bgtyear:edtyear
                 gain = ( node.fjAPrice*node.fjAVolume + node.fjBPrice*node.fjBVolume )*(1 - stockFee - slipRatio);   % 收益，手续费要减
                 profitRate = (gain-cost)/manager.initAsset;
                        
+                resDetial( rDetialTable.YjRate , ResultRowCnt, rateTable.date+pos) = node.rate;
                 if node.tradeLimitFlag == 1 % 如果是涨跌停
                     resDetial( rDetialTable.TradeLimit, ResultRowCnt, rateTable.date+i) = profitRate;  
                     dailyRes( resultTable.tradeLimitLeft ) = dailyRes( resultTable.tradeLimitLeft ) + profitRate;
@@ -277,7 +279,7 @@ for year = bgtyear:edtyear
                         '', node.fjBVolume, node.fjBPrice, ... 
                         '', cost, gain, gain-cost, manager.validMoney);
                 else
-                    used(pos) = 0;  % 没有任何操作，从新置0保证不影响该品种当天后续时刻的操作
+                    used(pos) = 0;  % 没有任何操作，从新置0保证不影响该品种当天后续时刻的操作  条件是 isOk == 1 && node.rate <= Yjtheresolds
                 end                
             end
             
@@ -333,6 +335,7 @@ for year = bgtyear:edtyear
                     manager.doZj(node.code, cost, gain, zjNum);  % zjNum == 2 不表示可以做2倍折价，而是该折价操作后，T+1天拥有2倍持仓
                     dailyRes( resultTable.zjNum ) = dailyRes( resultTable.zjNum )+1;
                     dailyRes( resultTable.zjRate ) = dailyRes( resultTable.zjRate ) + profitRate*isOk;
+                    resDetial( rDetialTable.ZjRate , ResultRowCnt, rateTable.date+pos) = node.rate;
                     resDetial( rDetialTable.ZjSyRate , ResultRowCnt, rateTable.date+pos) = profitRate*isOk;
                      % log
                     format = [ '--(%d,%2d)赎回母基金 %d(%.3f pred:%.3f) %d倍折价套利 \n' ...
@@ -364,9 +367,7 @@ for year = bgtyear:edtyear
         end
         dailyRes(resultTable.date) = date;
         dailyRes(resultTable.zsRate) = zsHsClose / zsHsBgt; 
-        % dailyRes(resultTable.vilidVar) = manager.typeNums;
         dailyRes(resultTable.validMoney) = manager.validMoney;
-        % dailyRes(resultTable.regVar) = dailyRes(resultTable.regVar)/assetManager2.typeNums;            %必须每天标准化
         
         Result(ResultRowCnt,:) = dailyRes;
         Result(ResultRowCnt,resultTable.cumVar ) = Result(ResultRowCnt-1,resultTable.cumVar )+Result(ResultRowCnt,resultTable.cumVar );       
@@ -429,7 +430,8 @@ for year = bgtyear:edtyear
     plot(x,Result(:,resultTable.zjRatePlus)+1,'y');
     plot(x,Result(:,resultTable.yjRateLeft)+1,'c');
     plot(x,Result(:,resultTable.tradeLimitLeft)+1,'m');
-    legend('套利净值', '沪深300', '资金总净值', '折价套利剩余空间', '二倍折价额外收益', '二倍折价溢价减益','涨跌停剩余收益率', -1);
+    plot(x,Result(:,resultTable.holdingValue)/(manager.initAsset*manager.handleRate),'Color',[0.6 0.2 0.4]);
+    legend('套利净值', '沪深300', '资金总净值', '折价套利剩余空间', '二倍折价额外收益', '二倍折价溢价减益','涨跌停剩余收益率','持仓净值波动', -1);
 
 
     configFile = configFile(1:end-4); % 去除拓展名

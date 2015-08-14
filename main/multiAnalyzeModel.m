@@ -19,9 +19,9 @@ function multiAnalyzeModel()
     global resultTable fjDailyTable rateTable muDailyTable idxDailyTable rDetialTable statList;
 
     handleRate = [2 3];%2/3、2/4持仓
-    zjType =2;     %折价类型 一倍，两倍……
+    zjType =1;     %折价类型 一倍，两倍……
     slipRatio = 0;  %N倍滑点率，0时代表不考虑滑点
-    configFile = '\config7_30.csv';
+    configFile = '\config彭.csv';
 
 
     [selectFund,weight] = getSelectionFund();
@@ -62,6 +62,7 @@ for k = 2:tableLen     %第一行是表头
     try
         %读取母基金，其分级基金A、B，以及对应指数的相关数据：每日净值、涨幅等等
         temp.muData = csvread(['G:\datastore\母基金1\' muName,'.csv']);
+        temp.aftData = csvread(['G:\datastore\母基金（后复权）\' muName '.csv']);
         temp.fjAData = csvread(['G:\datastore\日线1\' fjAName  '.csv']);
         temp.fjBData = csvread(['G:\datastore\日线1\' fjBName  '.csv']);
         temp.zsData = csvread(['G:\datastore\日线1\' zsName  '.csv']);
@@ -95,8 +96,8 @@ end
 srclen = size(Src,2);
 % 按年计算
 for year = bgtyear:edtyear
-    bgt = getIntDay([year, 1, 1]);
-    edt = getIntDay([year, 12, 31]);
+    bgt = getIntDay([year, 3, 1]);
+    edt = getIntDay([year, 8, 7]);
     assetManager = AssetManager(handleRate(1), handleRate(2));%2/3持仓
     Result=zeros(1,resultTable.numOfEntries);  % Result每一行记录了每一个交易日的总体折溢盈亏状况， 这里初始化第一行。
     
@@ -114,6 +115,7 @@ for year = bgtyear:edtyear
         isTrade = 0;
         RateRow = RateRow+1;
         resDetial(:,RateRow, rateTable.date ) = date;
+        holdingValueCnt = 0;
         
         %处理每一个种类的基金
         for i = 1:srclen;
@@ -122,12 +124,23 @@ for year = bgtyear:edtyear
             indexFjB = find( Src{i}.fjBData(:,fjDailyTable.date)==date);
             indexZs = find( Src{i}.zsData(:,idxDailyTable.date)==date);
             indexHs = find( zsHs300(:,idxDailyTable.date)==date);  
-            if isempty(indexMu) || isempty(indexFjA) || isempty(indexZs) || isempty(indexFjB) || isempty(indexHs)
-               continue;
-            end
-            if indexMu <= 1 || indexFjA <= 1 || indexFjB <= 1 || indexZs <= 1 || indexHs <= 1
+            indexAft = find( Src{i}.aftData(:,muDailyTable.date) == date );
+            
+            if isempty(indexMu) || isempty(indexAft)
                 continue;
             end
+            %
+            dailyRes( resultTable.holdingValue ) = dailyRes( resultTable.holdingValue ) +  Src{i}.aftData( indexAft , muDailyTable.netValue );
+            holdingValueCnt = holdingValueCnt + 1;
+            
+            if  isempty(indexFjA) || isempty(indexZs) || isempty(indexFjB) || isempty(indexHs) 
+               continue;
+            end
+            if indexMu <= 1 || indexFjA <= 1 || indexFjB <= 1 || indexZs <= 1 || indexHs <= 1 || indexAft <= 1
+                continue;
+            end
+            
+           
             
              % 设置局部变量           
             muData = Src{i}.muData( indexMu , : );          %当天母基金数据
@@ -162,6 +175,8 @@ for year = bgtyear:edtyear
             if isequal(Src{i}.fjBData(indexFjB,2),Src{i}.fjBData(indexFjB,3),Src{i}.fjBData(indexFjB,4),Src{i}.fjBData(indexFjB,5))%？？为什么要这样
                continue;  
             end
+            
+            
             isTrade = 1;    %判断是交易日
             %计算实际折价率
               %预测当日净值
@@ -301,6 +316,7 @@ for year = bgtyear:edtyear
             end
         end
 
+        
         dailyRes(resultTable.date) = date;
         dailyRes(resultTable.zsRate) = zsHsClose / zsHsBgt; 
         dailyRes(resultTable.vilidVar) = assetManager.typeNums;
@@ -308,7 +324,13 @@ for year = bgtyear:edtyear
         dailyRes(resultTable.regVar) = dailyRes(resultTable.regVar)/assetManager.typeNums;            %必须每天标准化
         
         Result(ResultRowCnt,:) = dailyRes;
-        Result(ResultRowCnt,resultTable.cumVar ) = Result(ResultRowCnt-1,resultTable.cumVar )+Result(ResultRowCnt,resultTable.cumVar );       
+        Result(ResultRowCnt,resultTable.cumVar ) = Result(ResultRowCnt-1,resultTable.cumVar )+Result(ResultRowCnt,resultTable.cumVar );  
+        
+        % 当天持仓净值必须包含全部品种，否则用前一天的替代
+        if holdingValueCnt ~= srclen
+            Result(ResultRowCnt, resultTable.holdingValue) = Result(ResultRowCnt-1, resultTable.holdingValue);
+        end
+        
         ResultRowCnt= ResultRowCnt+1;
         
         assetManager.updateState();      %每日交易结束，模拟证券公司操作，更新资产状态
@@ -340,7 +362,7 @@ for year = bgtyear:edtyear
     xmin = min(x);
     xmax = max(x);
     ymin = 0.5;
-    ymax = 2.5;
+    ymax = 2;
     axis([xmin xmax ymin ymax]);
     if zjType == 2
         fTitle = '两倍折价';
@@ -360,12 +382,14 @@ for year = bgtyear:edtyear
     text(xmin+10,ymax-inner*9,['溢价浪费总收益率：' num2str(result(resultTable.zjRateFail)) '%    溢价浪费年化收益率：' num2str(resultY(resultTable.zjRateFail)) '%'],'FontSize',10);
     text(xmin+10,ymax-inner*9.5,['涨跌停剩余总收益率：' num2str(result(resultTable.tradeLimitLeft)) '%    溢价浪费年化收益率：' num2str(resultY(resultTable.tradeLimitLeft)) '%'],'FontSize',10);
     plot(x,Result(:,resultTable.zsRate),'g');
-    plot(x,Result(:,resultTable.tlRate) + Result(:,resultTable.zsRate),'b');
-    plot(x,Result(:,resultTable.zjRateLeft)+1,'k');
-    plot(x,Result(:,resultTable.zjRatePlus)+1,'y');
-    plot(x,Result(:,resultTable.yjRateLeft)+1,'c');
-    plot(x,Result(:,resultTable.tradeLimitLeft)+1,'m');
-    legend('套利净值', '沪深300', '资金总净值', '折价套利剩余空间', '二倍折价额外收益', '二倍折价溢价减益','涨跌停剩余收益率', -1);
+    %plot(x,Result(:,resultTable.tlRate) + Result(:,resultTable.zsRate),'b');
+    plot(x,Result(:,resultTable.tlRate) + Result(:,resultTable.holdingValue)/Result(1,resultTable.holdingValue),'b');
+    %plot(x,Result(:,resultTable.zjRateLeft)+1,'k');
+    %plot(x,Result(:,resultTable.zjRatePlus)+1,'y');
+    %plot(x,Result(:,resultTable.yjRateLeft)+1,'c');
+    %plot(x,Result(:,resultTable.tradeLimitLeft)+1,'m');
+    plot(x,Result(:,resultTable.holdingValue)/Result(1,resultTable.holdingValue),'Color',[0.6 0.2 0.4]);
+    legend('套利净值', '沪深300', '资金总净值', '折价套利剩余空间', '二倍折价额外收益', '二倍折价溢价减益','涨跌停剩余收益率','持仓净值', -1);
 
 
     saveDir = ['..\result\折溢价率' configFile(1:end-4) '_' num2str(slipRatio) '倍滑点_持仓比' num2str(handleRate(1)) '-' num2str(handleRate(2))];
@@ -378,8 +402,8 @@ for year = bgtyear:edtyear
     figurePath = [saveDir '\' fTitle '_' num2str(year) '.bmp'];
     set(gcf,'outerposition',get(0,'screensize'));
     saveas( gcf, figurePath );
-    %RD = resDetial( rDetialTable.ZYRate,:,:);
-    %RD = squeeze(RD);
+    
+    
     save_path = [saveDir '\' num2str(year) 'Result'];
     sheet = 1;   
     xlswrite( save_path, resultTable.listHeader, sheet);   % 确保文件名中不存在字符'.'
