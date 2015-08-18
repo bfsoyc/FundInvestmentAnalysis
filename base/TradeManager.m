@@ -30,7 +30,7 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ðºÍ·Ö¼¶×Ê½ðµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ð£¬Á¬ÐøÕÛ¼ÛÊ±£¬½«ËùÓÐ2/3µÄ×Ê½ð¶¼Ö±½Ó³Ö²ÖÄ¸»ù½ð½øÐÐÌ×Àû
+classdef TradeManager < handle   %Î¬»¤Ä¸»ù½ðºÍ·Ö¼¶×Ê½ðµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ð£¬Á¬ÐøÕÛ¼ÛÊ±£¬½«ËùÓÐ2/3µÄ×Ê½ð¶¼Ö±½Ó³Ö²ÖÄ¸»ù½ð½øÐÐÌ×Àû
     properties
         types           % Ä¸»ù½ð×´Ì¬£ºÉê¹º¡¢Éê¹ºÏÞÖÆÖÐ¡¢Êê»Ø¡¢Êê»ØÏÞÖÆÖÐ¡¢×ÔÓÉÌ¬
         holdings        % ³Ö²Ö·ÝÊý
@@ -49,7 +49,7 @@ classdef AssetManagerQQQ < handle   %Î¬»¤Ä¸»ù½ðºÍ·Ö¼¶×Ê½ðµÄ×´Ì¬£¬³ä·ÖÀûÓÃ×Ê½ð£¬Á
     end
     
     methods
-        function obj = AssetManagerQQQ(initAsset,handleRate)
+        function obj = TradeManager(initAsset,handleRate)
             obj.initAsset = initAsset;
             obj.validMoney = initAsset;
             obj.handleRate = handleRate;

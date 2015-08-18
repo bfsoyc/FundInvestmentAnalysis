@@ -119,6 +119,7 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, netvalue, manager, i
         leftA = fjAHolding;
         while( idx < 6 )
             saleAVolume(idx) = min(saleAVolume(idx), leftA);
+
             leftA = leftA -  saleAVolume(idx);
             idx = idx + 1;
         end
