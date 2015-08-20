@@ -2,10 +2,12 @@
 % 该类用于模拟交易的资金管理，包含了折溢价操作的所有方法
 %   method:
 %       新增品种
-%       isOk = addTypes(obj, configInfo, w , netvalue )
+%       pos = addTypes(obj, configInfo, w , netvalue )
 %           configInfo: 包含母基金的信息.
 %           w: 归一化权重
 %           netvalue: 建仓当天母基金净值
+%           返回值:
+%           pos 新品种插入到的位置
 %
 %       判断能否做折价
 %       [isOk,pos] = canDoZj(obj, OF, cost)
@@ -63,7 +65,7 @@ classdef TradeManager < handle   %维护母基金和分级资金的状态，充分利用资金，连续
             fprintf('-初始化 投入资金 %d.\n', obj.validMoney );
         end
         
-        function isOk = addTypes(obj, configInfo, w , netvalue )
+        function pos = addTypes(obj, configInfo, w , netvalue )
             obj.types = [obj.types Type(configInfo.name)];
             obj.Info = [obj.Info configInfo];
             holding = obj.initAsset * obj.handleRate * w / 2 / netvalue;      % 计算购买的份额
@@ -80,7 +82,7 @@ classdef TradeManager < handle   %维护母基金和分级资金的状态，充分利用资金，连续
             obj.holdings = [obj.holdings holding];
             obj.validMoney = obj.validMoney - netvalue * holding * 2;            
             obj.typeNums = obj.typeNums + 1;
-            isOk=1; 
+            pos = obj.typeNums; 
             
             % log 
             fprintf('--建仓购入 %d（权重：%.2f） %d 份（净值%f）, 剩余现金 %f .\n', configInfo.name,w, holding, netvalue, obj.validMoney );

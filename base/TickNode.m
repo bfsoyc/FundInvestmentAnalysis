@@ -12,6 +12,7 @@ classdef TickNode
         tradeLimitFlag;  % 涨跌停标识
         time;
         rate;            % 折合折溢价率
+        margin;          % rate - threshold
     end
     
     methods

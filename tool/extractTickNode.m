@@ -36,6 +36,7 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, netvalue, manager, i
             curB = timeListB(sec,:);
         end
         % 判断是否可以做溢价
+        Flag = 1;
         node = TickNode;
         buyAVolume = curA( tickTable.buyVolume )';  % 向量默认为列向量
         buyBVolume = curB( tickTable.buyVolume )';
@@ -55,39 +56,41 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, netvalue, manager, i
                     continue;
                 end
             else
-                continue;
+                Flag = 0;              
             end
             node.tradeLimitFlag = 1;
         end
-        idx = 1;
-        leftA = fjAHolding;     % leftA 是基金A仍需要购入的份数
-        while( idx < 6 )
-            buyAVolume(idx) = min(buyAVolume(idx), leftA);
-            leftA = leftA -  buyAVolume(idx);
-            idx = idx + 1;
-        end
-        idx = 1;
-        leftB = fjBHolding;
-        while( idx < 6 )
-            buyBVolume(idx) = min(buyBVolume(idx), leftB);
-            leftB = leftB -  buyBVolume(idx);
-            idx = idx + 1;
-        end
-        buyA = buyAVolume/fjAHolding; % 归一化
-        buyB = buyBVolume/fjBHolding;
-        preRate = buyAPrice*buyA*shareA + buyBPrice*buyB*shareB - netvalue ;  % 等效折溢价率
-        if preRate > 0 % 大于0而不是大于YjThresholds 是因为要确定拆分时机
-            
-            node.code = muCode;
-            node.netvalue = netvalue;
-            node.fjAPrice = buyAPrice;
-            node.fjAVolume = buyAVolume;
-            node.fjBPrice = buyBPrice;
-            node.fjBVolume = buyBVolume;
-            node.time = sec;
-            node.rate = preRate;
-            tickNodes = [tickNodes; node];
-            continue;   % 可以做溢价就不可能做折价了,进入下一秒的判断
+        if Flag == 1
+            idx = 1;
+            leftA = fjAHolding;     % leftA 是基金A仍需要购入的份数
+            while( idx < 6 )
+                buyAVolume(idx) = min(buyAVolume(idx), leftA);
+                leftA = leftA -  buyAVolume(idx);
+                idx = idx + 1;
+            end
+            idx = 1;
+            leftB = fjBHolding;
+            while( idx < 6 )
+                buyBVolume(idx) = min(buyBVolume(idx), leftB);
+                leftB = leftB -  buyBVolume(idx);
+                idx = idx + 1;
+            end
+            buyA = buyAVolume/fjAHolding; % 归一化
+            buyB = buyBVolume/fjBHolding;
+            preRate = buyAPrice*buyA*shareA + buyBPrice*buyB*shareB - netvalue ;  % 等效折溢价率
+            if preRate > 0 % 大于0而不是大于YjThresholds 是因为要确定拆分时机
+
+                node.code = muCode;
+                node.netvalue = netvalue;
+                node.fjAPrice = buyAPrice;
+                node.fjAVolume = buyAVolume;
+                node.fjBPrice = buyBPrice;
+                node.fjBVolume = buyBVolume;
+                node.time = sec;
+                node.rate = preRate;
+                tickNodes = [tickNodes; node];
+                continue;   % 可以做溢价就不可能做折价了,进入下一秒的判断
+            end
         end
         %profit = curA(tickTable.buyPrice)*buyAVolume + curB(tickTable.buyPrice)*buyBVolume - netvalue*holding ;
         
@@ -142,6 +145,7 @@ function tickNodes = extractTickNode(ticksDataA,ticksDataB, netvalue, manager, i
             node.fjBVolume = saleBVolume;
             node.time = sec;
             node.rate = disRate;
+            node.margin = disRate - ZjThresholds;
             tickNodes = [tickNodes; node];
         end        
     end        

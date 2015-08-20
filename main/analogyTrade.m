@@ -2,7 +2,7 @@
 % 模拟实际交易
 % 策略是：每个品种在某个时刻可套利的情况下，按持仓量全部卖出或买入，五档挂单量不
 % 够的自动放弃。同一天内，溢价套利可同时下单，连续两次折价套利之间需要相隔5秒
-% 
+% ！！尾盘时若先出现涨跌停不能交易，则判断为今天不能交易
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% 添加工程目录
@@ -125,7 +125,8 @@ for year = bgtyear:edtyear
     zsHsClose = 0;
      
     %按日计算
-    for date = bgt+1:edt % 确保取到昨日净值
+    for date = 42160:edt
+    %for date = bgt+1:edt % 确保取到昨日净值
         resDetial(:,ResultRowCnt, rateTable.date ) = date;
         dailyRes = zeros(1, resultTable.numOfEntries);  % result Table 的一行.
         [Y, M, D] = getVectorDay( date );
@@ -206,7 +207,9 @@ for year = bgtyear:edtyear
             end
             StartIdx = max( StartIdx, 2 );  % 下表越界检查，同上
             ticksDataB = ticks( StartIdx-1:EndIdx, : );     % 需要一个begT之前的交易数据，同上。
-            
+            if date == 42024
+                pp = 1;
+            end
             tickNodes = extractTickNode( ticksDataA, ticksDataB, predictNetValue, manager, i, date+begT );
             allTicks = [allTicks; tickNodes ];
         end
@@ -283,10 +286,14 @@ for year = bgtyear:edtyear
                 end                
             end
             
+            if date == 42024
+                pp = 1;
+            end
+            
             % 再处理折价的. discount ( 特殊处理，这一秒做了折价要5s后才能做第二次 )
             disNodes =  secNodes([secNodes.rate] < 0);
             
-            [~,idx] = sort( [disNodes.rate] );   % 按折价率(绝对值)从大到小排序.
+            [~,idx] = sort( [disNodes.margin] );   % 按折价率(绝对值)从大到小排序.
             disNodes = disNodes( idx );
             
             for j = 1:length(disNodes)                
