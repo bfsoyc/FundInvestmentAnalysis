@@ -3,7 +3,7 @@
 %   method:
 %       新增品种
 %       pos = addTypes(obj, configInfo, w , netvalue )
-%           configInfo: 包含母基金的信息.
+%           configInfo: 包含母基金的信息的结构体.
 %           w: 归一化权重
 %           netvalue: 建仓当天母基金净值
 %           返回值:
@@ -13,30 +13,35 @@
 %       function pos = find(obj,NameStr)
 %           NameStr: 母基金代号的字符数组
 %
-%       判断能否做折价
-%       [isOk,pos] = canDoZj(obj, OF, cost)
-%           
-%           cost: 需要的资金
+%       计算溢价率
+%       [premRate, tradeVol, pos] = calPremRate( obj, OF, APrice, BPrice, AVolume, BVolume, predNetvalue )
+%           OF: 母基金代号，若输入代号，请输入字符数组，若输入母基金的位置，请输
+%               入位置标量
+%           APrice: A的价格，请保持APrice, BPrice, AVolume, BVolume 长度一致
+%           AVolume: A的五档量
+%           predNetvalue: 当天预测净值
+%           返回值:
+%           premRate: 溢价率
+%           tradeVol: 母基金的交易量
+%           pos: 母基金位置(useless）
+%               当交易无法进行时，输出 premRate = 0， tradeVol = 0
 %
-%       进行折价操作
-%       doZj(obj, OF, cost, retrive, num)
-%           retrive: 赎回母基金回收的资金
-%           num: 为1时，折价操作后保留一份母基金，否则合并刚购入的分级基金多一份母基金持仓
-%       
-%       判断能否做溢价
-%       [isOk, pos] = canDoYj(obj, OF)
-%           OF: 直接使用代码调用该函数时请用字符数组
-%               否则用该母基金在结构体内的位置。
-%           返回值: 
-%           isOk = 1为满足溢价套利条件， = 2 为因没有分级A、B的持仓而无法套利。
+%       计算折价率
+%       [disRate, tradeVol] = calDisRate( obj, OF, APrice, BPrice, AVolume, BVolume, predNetvalue )
+%           参考 calPremRate
 %
 %       进行溢价操作
-%       doYj(obj, OF, profit)
-%           profit: 本次操作的盈利额， profit = gain - cost
-%
-%       拆分母基金，当 canDoYj(obj,OF) 返回的isOK为2时，即应调用该函数进行拆分操作
-%       doSpl(obj,OF)
-%
+%       profitRate = doYj(obj, OF, premRate, tradeVol, predNetvalue, realNetvalue)  
+%           premRate: 溢价率
+%           tradeVol: 母基金交易量
+%           predNetvalue: 预测净值,用于确定申购母基金的费用
+%           realNetvalue: 真实净值，用于计算套利率
+%           返回值:
+%           profitRate: 用旧模型的计算方式计算的套利率
+%       
+%       每日交易结束后状态更新、资金变动和持仓变化
+%       updateState(obj,netValue)
+%           netValue: 所有品种的母基金结算当天净值向量
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连续折价时，将所有2/3的资金都直接持仓母基金进行套利
@@ -55,6 +60,7 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
     end    
     
     methods
+        %%
         function obj = tradeSimulator(initAsset,handleRate)
             obj.initAsset = initAsset;
             obj.validMoney = initAsset;
@@ -67,28 +73,19 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
             fprintf('-初始化 投入资金 %d.\n', obj.validMoney );
         end
         
+        %%
         function pos = addTypes(obj, configInfo, w , netvalue )
             holding = obj.initAsset * obj.handleRate * w / 2 / netvalue;      % 计算购买的份额
 
             % 确定3种持仓比下 5:5 6:4 7:3 ， 购入母基金的真实份额 holding
-            if configInfo.aShare*5 == configInfo.bShare*5   % 5:5
-                M = mod( holding,200 );
-                holding = holding - M;
-            elseif configInfo.aShare*4 == configInfo.bShare*6  % 6:4
-                M = mod( holding,500 );
-                holding = holding - M;
-            elseif configInfo.aShare*3 == configInfo.bShare*7  % 7:3
-                M = mod( holding,1000 );
-                holding = holding - M;
-            else
-                error('未知比例,或检查精度问题');
-            end
+            holding = adjustVol( holding, configInfo.aShare, configInfo.bShare );
             
             fund = Fund;
             fund.copyConfig( configInfo );
             fund.holding = holding;
             fund.Aholding = holding*fund.aShare;
             fund.Bholding = holding*fund.bShare;
+            fund.leastTradeVol = max( ceil(holding/10), 50000 );    % 最多交易10次，每次最小交易量由品种持仓量决定，但最小为50000
             obj.funds = [obj.funds fund];
             
             obj.validMoney = obj.validMoney - netvalue * holding * 2;            
@@ -98,6 +95,7 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
             fprintf('--建仓购入 %d（权重：%.2f） %d 份（净值%f）, 剩余现金 %f .\n', configInfo.name,w, holding, netvalue, obj.validMoney );
         end        
             
+        %%
         function  updateState(obj,netValue)     % 每日交易结束后状态更新
             fprintf('-交易日结算\n');
             for i = 1:obj.typeNums 
@@ -147,6 +145,7 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
             obj.redeemMoney = 0;  
         end
         
+        %%
         function dispHolding(obj)
             for i = 1:obj.typeNums
                 fund = obj.funds(i);
@@ -154,7 +153,8 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
                     fund.name, fund.holding, fund.fjAName, fund.Aholding, fund.fjBName, fund.Bholding );
             end
         end
-        % 请保持APrice, BPrice, AVolume, BVolume 长度一致
+        
+        %%
         function [premRate, tradeVol, pos] = calPremRate( obj, OF, APrice, BPrice, AVolume, BVolume, predNetvalue )
             if ischar( OF )
                 pos = obj.find(OF);
@@ -165,7 +165,7 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
                 error('不存在的母基金');
             end
             fund = obj.funds(pos);
-            if obj.referTime < fund.lastOPTime + 15  % 该基金距离上一次操作时间间隔小于15s
+            if obj.referTime < fund.lastOPTime + 15  % 该基金距离上一次操作时间间隔小于 X s
                 premRate = 0;
                 tradeVol = 0;
                 return;
@@ -181,21 +181,20 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
             %  !!母基金与分级基金的持仓比例会随时间而变动
             % 溢价
             tradeVol =  fund.Aholding/fund.aShare;  % 溢价套利做的量取决与分级基金的持仓
-%             if tradeVol == 0   % 2倍折价 将分级基金合并了
-%                 tradeVol = 10;    % 设置tradeVol 为非0值，仅仅用于计算溢价率。
-%             end
+            if tradeVol > 2*fund.leastTradeVol
+                tradeVol = fund.leastTradeVol;      % 加了这句限定了每次交易最小交易份数,不需要时注释掉
+            end
+            
+            tradeVol = adjustVol( tradeVol, fund.aShare, fund.bShare );
             leftA = tradeVol*fund.aShare;
             leftB = tradeVol*fund.bShare;
-            [AVolume, BVolume] = calTradeVol( AVolume, BVolume, leftA, leftB );
-            tradeVol = min( sum(AVolume)/fund.aShare, sum(BVolume)/fund.bShare );   % 有可能A与B五档量不足
-            if predNetvalue * tradeVol < 1e4    % 申购母基金的金额小于5w
+            [AVolume, BVolume] = calTradeVol( AVolume, BVolume, leftA, leftB );           
+            if ( tradeVol < fund.leastTradeVol*0.95 || sum(AVolume) < leftA || sum(BVolume) < leftB )  % 因为adjustVol会使tradeVol变小，所以0.95不能少 
+                % A与B五档量不足，不做,另外保持交易的母基金与分级A/B的比例，零头不交易
                 premRate = 0;
                 tradeVol = 0;
                 return;
             end
-            leftA = tradeVol*fund.aShare;   % 更新了tradeVol, 必须再算一次[AVolume, BVolume]
-            leftB = tradeVol*fund.bShare;
-            [AVolume, BVolume] = calTradeVol( AVolume, BVolume, leftA, leftB );
             
             AVolume = AVolume/sum(AVolume); % 归一化
             BVolume = BVolume/sum(BVolume);
@@ -204,6 +203,7 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
             
         end
             
+        %%
         function [disRate, tradeVol] = calDisRate( obj, OF, APrice, BPrice, AVolume, BVolume, predNetvalue )
             if ischar( OF )
                 pos = obj.find(OF);
@@ -214,7 +214,7 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
                 error('不存在的母基金');
             end
             fund = obj.funds(pos);
-            if obj.referTime < fund.lastOPTime + 15  % 该基金距离上一次操作时间间隔小于15s
+            if obj.referTime < fund.lastOPTime + 15  % 该基金距离上一次操作时间间隔小于 X s
                 disRate = 0;
                 tradeVol = 0;
                 return;
@@ -228,32 +228,32 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
                 error('AVoluem 与 BVolume 必须是列向量');
             end
             
-            % 折价的时候判断目前资金足够做多少份折价套利比较复杂
+           
             
             % 计算价差, !!母基金与分级基金的持仓比例会随时间而变动
             % 折价,有多少母基金能做就做多少母基金
             tradeVol =  fund.holding - fund.freezHolding ;
+            if tradeVol > 2*fund.leastTradeVol
+                tradeVol = fund.leastTradeVol;      % 加了这句限定了每次交易最小交易份数,不需要时注释掉
+            end
+            tradeVol = adjustVol( tradeVol, fund.aShare, fund.bShare );
             leftA = tradeVol*fund.aShare;
             leftB = tradeVol*fund.bShare;
             [AVolume, BVolume] = calTradeVol( AVolume, BVolume, leftA, leftB );
-            tradeVol = min( sum(AVolume)/fund.aShare, sum(BVolume)/fund.bShare );    % 有可能A与B五档量不足,正常情况下，sum(AVolume) == leftA == tradeVol*fund.aShare
-            leftA = tradeVol*fund.aShare;       % 更新了 tradeVol 后再算一次
-            leftB = tradeVol*fund.bShare;
-            [AVolume, BVolume] = calTradeVol( AVolume, BVolume, leftA, leftB );
             
-            cost = APrice*AVolume + BPrice*BVolume;
-            if cost < 1e4   % 交易额小于5w 放弃该笔交易
+            if ( tradeVol < fund.leastTradeVol*0.95 || sum(AVolume) < leftA || sum(BVolume) < leftB )   % A与B五档量不足，不做
                 disRate = 0;
                 tradeVol = 0;
                 return;
             end
             
-            AVolume = AVolume/sum(AVolume); % 归一化 （前面的cost判断让此处不会以0为除数)
+            AVolume = AVolume/sum(AVolume); % 归一化 
             BVolume = BVolume/sum(BVolume);
             disRate = APrice*AVolume*fund.aShare + BPrice*BVolume*fund.bShare - predNetvalue ;  % 等效折价率
         end
         
-        function profit = doYj(obj, OF, premRate, tradeVol, predNetvalue)  
+        %%
+        function profitRate = doYj(obj, OF, premRate, tradeVol, predNetvalue, realNetvalue)  
             if ischar( OF )
                 pos = obj.find(OF);
             else
@@ -264,13 +264,16 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
             end
             
             fund = obj.funds(pos);
-            gain = (premRate+predNetvalue)*tradeVol*(1-fund.stockFee);
-            cost = predNetvalue*tradeVol*(1+fund.applyFee);
-            fund.applyMoney = fund.applyMoney + cost;
-            profit = gain - cost;           
-            obj.validMoney = obj.validMoney + gain - cost;
+            gain = (premRate+predNetvalue)*tradeVol*(1-fund.stockFee);            
+            OldCost = realNetvalue*tradeVol*(1+fund.applyFee);
+            profitRate = (gain - OldCost)/obj.initAsset;        % 这是旧模型的计算收益率的方法 
+            cost = predNetvalue*tradeVol*(1+fund.applyFee);  
+            cost = adjustTradeMoney( cost );
+            fund.applyMoney = fund.applyMoney + cost;                     
+            obj.validMoney = obj.validMoney + gain - cost;   % 溢价不用考虑钱不够
             % 更新持仓状态
             fund.holding = fund.holding - tradeVol;
+            fund.freezHolding = max( 0, fund.freezHolding - tradeVol );    % 优先将前一天申购今天不能赎回的份额拿去拆分
             fund.Aholding = fund.Aholding - tradeVol*fund.aShare;
             fund.Bholding = fund.Bholding - tradeVol*fund.bShare;
             fund.cfHolding = fund.cfHolding + tradeVol;
@@ -287,7 +290,8 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
             
         end
         
-        function profit = doZj(obj, OF, disRate, tradeVol, predNetvalue)
+        %%
+        function profitRate = doZj(obj, OF, disRate, tradeVol, predNetvalue, realNetValue)
             if ischar( OF )
                 pos = obj.find(OF);
             else
@@ -297,13 +301,19 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
                 error('不存在的母基金');
             end
             fund = obj.funds(pos);
-            cost = (disRate+predNetvalue)*tradeVol*(1+fund.stockFee);
+            cost = (disRate+predNetvalue)*tradeVol*(1+fund.stockFee);            
+            if obj.validMoney < cost % 不够钱
+                profitRate = 0;
+                return;
+            end
+            
             gain = predNetvalue*tradeVol*(1-fund.redeemFee);
-            profit = gain-cost;
+            OldGain = realNetValue*tradeVol*(1-fund.redeemFee);
+            profitRate = (OldGain - cost)/obj.initAsset;        % 这是旧模型的计算收益率的方法           
             fund.redeemHolding = fund.redeemHolding+tradeVol;       % 该基金赎回的份额，用于当天结算时计算真实收益
             obj.validMoney = obj.validMoney - cost;
             % 更新持仓
-            fund.holding = fund.holding - tradeVol;
+            fund.holding = fund.holding - tradeVol;     % 直接从母基金持仓拆分，实际上可能量不足，产生小负数
             if fund.holding < 0
                 error(['母基金' num2str(fund.name) '持仓量不足要求的交易量 ' num2str(tradeVol)])
             end
@@ -321,7 +331,8 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
                 '', cost, ... 
                 '', obj.validMoney);
         end
-            
+         
+        %%
         function splitFund(obj,OF)  %%分拆一半母基金
             if ischar( OF )
                 pos = obj.find(OF);
@@ -341,6 +352,7 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
             fprintf('--母基金 %d 拆分\n', obj.funds(pos).name ); 
         end
         
+        %%
         function mergeFund(obj, OF)
             if ischar( OF )
                 pos = obj.find(OF);
@@ -357,6 +369,7 @@ classdef tradeSimulator < handle   %维护母基金和分级资金的状态，充分利用资金，连
             fprintf('--母基金 %d 通过合并增加 %d 份\n', obj.funds(pos).name, hb ); 
         end
        
+        %%
         function pos = find(obj,NameStr)
             if ~ischar( NameStr )
                 error('请输入母基金代码的字符数组');

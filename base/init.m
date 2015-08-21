@@ -144,6 +144,7 @@ global turnoverTHeader;
     resultTable.validMoney = 15;
     resultTable.tradeLimitLeft = 16;    % 因为涨跌停导致的剩余价值
     resultTable.holdingValue = 17;      % 持仓价值
+    
     resultTable.numOfEntries = 17;     %该变量记录result表格的列数
     
     resultTable.listHeader = {'日期','累计总套利率','zsRate','当前品总数','操作数','溢价操作数','折价操作数','资金缺乏数',...
@@ -180,7 +181,8 @@ global turnoverTHeader;
     rDetialTable.FcRate = 8;
     rDetialTable.HbRate = 9;
     rDetialTable.TradeLimit = 10;
-    rDetialTable.numOfEntries = 10;
+    rDetialTable.TradeProportion = 11;   % 分笔交易时，基金交易量占持仓量的比重
+    rDetialTable.numOfEntries = 11;
 
 %%%%%%%%%%%%%%%%%%%%%%%分级基金套利率表头配置%%%%%%%%%%%%%%%%%%
     rateTable.date = 1;

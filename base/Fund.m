@@ -27,6 +27,7 @@ classdef Fund < handle
         holdingStatus = 0         % 0即未经2倍折价的合并.
         
         lastOPTime = -180     % 上一次交易时间，用于控制分笔交易的间隔时间
+        leastTradeVol         % 最小交易金额
     end
     
     methods

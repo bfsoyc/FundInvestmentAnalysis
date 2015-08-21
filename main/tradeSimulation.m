@@ -1,9 +1,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 模拟实际交易
-% 策略是：每个品种在某个时刻可套利的情况下，按持仓量全部卖出或买入，五档挂单量不
-% 够的自动放弃。同一天内，不同的品种溢价套利可同时下单，连续两次折价套利之间需要相隔5秒.
+% 模拟实际交易-分时分笔
+% 策略是：每个品种在某个时刻可套利的情况下，按最少交易量卖出或买入，五档挂单量不
+% 够的按能交易的部分全部交易。同一天内，不同的品种溢价套利可同时下单，连续两次折
+% 价套利之间需要相隔WaitTime(3)秒.
 % 同一品种，分笔交易时，两次交易时间间隔不少于15s
-% 
+% 认为同一品种同一天不可能同时出现折价套利与溢价套利
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% 添加工程目录
@@ -26,7 +27,8 @@ filterT = [14 54 00; 14 57 00];
 begT = getDoubleTime(filterT(1, :));    % 实盘操作开始时间
 endT = getDoubleTime(filterT(2, :));
 
-initMoney = 6e6;
+initMoney = 368e6;  % 初始资金
+waitTime = 3;
 handleRate = [2 3];%2/3、2/4持仓
 zjType =1;     %折价类型 一倍，两倍……
 slipRatio = 0;  %N倍滑点率，0时代表不考虑滑点
@@ -35,8 +37,9 @@ save_root = '..\result';
 data_root = 'G:\datastore';
 configFile = '\config7_30.csv';
 [~,w] = getSelectionFund();
-%w = [1 1 1];
+%w = ones(1,11);
 w = w/sum(w);
+
 
 %%  读取数据
 config = readcsv2(configFile, 12);   %
@@ -234,7 +237,7 @@ for year = bgtyear:edtyear
         previousZjTime = -6;    % 记录当天上一次做折价套利的时间
         % 模拟每一秒       
         for sec = 1:180
-            if date == 42024
+            if date == 42010 && sec == 178    % debug
                 pp = 1;
             end
             manager.referTime = sec;
@@ -259,12 +262,14 @@ for year = bgtyear:edtyear
 %                     manager.splitFund(j);
 %                 end
                 if  premRate > manager.funds(j).YjThresholds % 可以进行溢价套利
-                    manager.doYj(j, premRate, tradeVol, predictNetValue(j));
+                    profitRate = manager.doYj(j, premRate, tradeVol, predictNetValue(j), realNetValue(j));
+                    dailyRes( resultTable.yjNum ) = dailyRes( resultTable.yjNum )+1;
+                    dailyRes( resultTable.yjRate ) = dailyRes( resultTable.yjRate ) + profitRate;        % 套利率累加
                 end
             end
               
             % 判断是否折价( 注意1s内只做一次折价 )
-            if sec < previousZjTime + 5
+            if sec < previousZjTime + waitTime
                 continue;
             end
             disStruct.rate = 0;     % 这个结构体记录折价套利率最大品种
@@ -291,7 +296,11 @@ for year = bgtyear:edtyear
 %                 end
             end
             if disStruct.rate  < manager.funds(disStruct.idx).ZjThresholds      % 折价套利
-                manager.doZj(disStruct.idx, disStruct.rate, disStruct.tradeVol, predictNetValue(disStruct.idx) );
+                profitRate = manager.doZj(disStruct.idx, disStruct.rate, disStruct.tradeVol, predictNetValue(disStruct.idx), realNetValue(disStruct.idx) );
+                if profitRate ~= 0  
+                    dailyRes( resultTable.zjNum ) = dailyRes( resultTable.zjNum )+1;
+                    dailyRes( resultTable.zjRate ) = dailyRes( resultTable.zjRate ) + profitRate;
+                end
                 previousZjTime = sec;
             end
         end
@@ -307,10 +316,20 @@ for year = bgtyear:edtyear
         
         Result(ResultRowCnt,:) = dailyRes;
         Result(ResultRowCnt,resultTable.cumVar ) = Result(ResultRowCnt-1,resultTable.cumVar )+Result(ResultRowCnt,resultTable.cumVar );       
-        ResultRowCnt= ResultRowCnt+1;
         
+        
+        for j = 1:typeNum   % 统计交易量占持仓的比例
+            fund = manager.funds(j);
+            if fund.hbAholding > 0 % 进行了分级基金的合并
+                tradeVol = fund.hbAholding/fund.aShare;
+                resDetial( rDetialTable.TradeProportion , ResultRowCnt, rateTable.date+j) = -tradeVol/(tradeVol+fund.holding);
+            end
+            if fund.cfHolding > 0 % 进行了母基金的拆分
+                resDetial( rDetialTable.TradeProportion , ResultRowCnt, rateTable.date+j) = fund.cfHolding/(fund.cfHolding+fund.holding);
+            end
+        end
         manager.updateState(realNetValue);      %每日交易结束，模拟证券公司操作，更新资产状态   
-        manager.dispHolding();
+        ResultRowCnt= ResultRowCnt+1;
     end
     manager.updateState();  % 回收最后一天冻结的资金
     manager.dispHolding();
@@ -377,7 +396,7 @@ for year = bgtyear:edtyear
     legend('套利净值', '沪深300', -1);
 
     configFile = configFile(1:end-4); % 去除拓展名
-    saveDir = ['..\result\分时数据模拟' configFile '_' num2str(slipRatio) '倍滑点_持仓比' num2str(handleRate(1)) '-' num2str(handleRate(2))];
+    saveDir = ['..\result\分时数据分笔交易模拟' configFile '_' num2str(slipRatio) '倍滑点_持仓比' num2str(handleRate(1)) '-' num2str(handleRate(2))];
     if exist(saveDir,'dir') == 0
         mkdir(saveDir);
     end
@@ -400,5 +419,5 @@ for year = bgtyear:edtyear
     csvwrite([saveDir '\' num2str(year) '分拆溢价率.csv'], squeeze(resDetial( rDetialTable.FcRate,:,:)));
     csvwrite([saveDir '\' num2str(year) '合并折价率.csv'], squeeze(resDetial( rDetialTable.HbRate,:,:)));
     csvwrite([saveDir '\' num2str(year) '涨跌停时预计收益率.csv'], squeeze(resDetial( rDetialTable.TradeLimit,:,:)));
-
+    csvwrite([saveDir '\' num2str(year) '分笔交易量比重.csv'], squeeze(resDetial( rDetialTable.TradeProportion,:,:)));
 end

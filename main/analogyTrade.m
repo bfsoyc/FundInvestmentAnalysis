@@ -26,7 +26,7 @@ endT = getDoubleTime(filterT(2, :));
 
 initMoney = 6e6;
 handleRate = [2 3];%2/3、2/4持仓
-zjType =1;     %折价类型 一倍，两倍……
+zjType =2;     %折价类型 一倍，两倍……
 slipRatio = 0;  %N倍滑点率，0时代表不考虑滑点
 
 save_root = '..\result';
@@ -125,7 +125,7 @@ for year = bgtyear:edtyear
     zsHsClose = 0;
      
     %按日计算
-    for date = 42160:edt
+    for date = bgt:edt
     %for date = bgt+1:edt % 确保取到昨日净值
         resDetial(:,ResultRowCnt, rateTable.date ) = date;
         dailyRes = zeros(1, resultTable.numOfEntries);  % result Table 的一行.
@@ -424,26 +424,26 @@ for year = bgtyear:edtyear
     end
     %title(fTitle);
     inner = (ymax-ymin)/10;
-%     text(xmin+10,ymax-inner*1,['开始时间：',datestr(Result(1,resultTable.date)+693960,'yyyy-mm-dd'),'    ','结束时间：',datestr(Result(end,resultTable.date)+693960,'yyyy-mm-dd')],'FontSize',10);
-%     text(xmin+10,ymax-inner*2,['实际交易日：' num2str(tradeDays) '天      输入时间跨度：' num2str(timesDuration) '天    持仓品种数均值：' num2str(typeNumsM)],'FontSize',10);
+    text(xmin+10,ymax-inner*1,['开始时间：',datestr(Result(1,resultTable.date)+693960,'yyyy-mm-dd'),'    ','结束时间：',datestr(Result(end,resultTable.date)+693960,'yyyy-mm-dd')],'FontSize',10);
+    text(xmin+10,ymax-inner*2,['实际交易日：' num2str(tradeDays) '天      输入时间跨度：' num2str(timesDuration) '天    持仓品种数均值：' num2str(typeNumsM)],'FontSize',10);
     text(xmin+10,ymax-inner*3,['总投入资金:' num2str(initMoney) ' 总收益率：' num2str(result(resultTable.tlRate)) '%    年化收益率：' num2str(resultY(resultTable.tlRate)) '%' '    平均每天套利：' num2str(resultD(resultTable.tlRate)) '%'],'FontSize',10);
-%     text(xmin+10,ymax-inner*4,['折价总收益率：' num2str(result(resultTable.zjRate)) '%    折价年化收益率：' num2str(resultY(resultTable.zjRate)) '%' '    平均每天套利：' num2str(resultD(resultTable.zjRate)) '%'],'FontSize',10);
-%     text(xmin+10,ymax-inner*5,['溢价总收益率：' num2str(result(resultTable.yjRate)) '%    溢价年化收益率：' num2str(resultY(resultTable.yjRate)) '%' '    平均每天套利：' num2str(resultD(resultTable.yjRate)) '%'],'FontSize',10);
-%     text(xmin+10,ymax-inner*6,['折价额外总收益率：' num2str(result(resultTable.zjRatePlus)) '%    折价额外年化收益率：' num2str(resultY(resultTable.zjRatePlus)) '%'],'FontSize',10);
-%     text(xmin+10,ymax-inner*7,['折价剩余总收益率：' num2str(result(resultTable.zjRateLeft)) '%    折价剩余年化收益率：' num2str(resultY(resultTable.zjRateLeft)) '%'],'FontSize',10);
+    text(xmin+10,ymax-inner*4,['折价总收益率：' num2str(result(resultTable.zjRate)) '%    折价年化收益率：' num2str(resultY(resultTable.zjRate)) '%' '    平均每天套利：' num2str(resultD(resultTable.zjRate)) '%'],'FontSize',10);
+    text(xmin+10,ymax-inner*5,['溢价总收益率：' num2str(result(resultTable.yjRate)) '%    溢价年化收益率：' num2str(resultY(resultTable.yjRate)) '%' '    平均每天套利：' num2str(resultD(resultTable.yjRate)) '%'],'FontSize',10);
+    text(xmin+10,ymax-inner*6,['折价额外总收益率：' num2str(result(resultTable.zjRatePlus)) '%    折价额外年化收益率：' num2str(resultY(resultTable.zjRatePlus)) '%'],'FontSize',10);
+    text(xmin+10,ymax-inner*7,['折价剩余总收益率：' num2str(result(resultTable.zjRateLeft)) '%    折价剩余年化收益率：' num2str(resultY(resultTable.zjRateLeft)) '%'],'FontSize',10);
     
-%     text(xmin+10,ymax-inner*8,['溢价剩余总收益率：' num2str(result(resultTable.yjRateLeft)) '%    溢价剩余年化收益率：' num2str(resultY(resultTable.yjRateLeft)) '%'],'FontSize',10);
-%     text(xmin+10,ymax-inner*9,['溢价浪费总收益率：' num2str(result(resultTable.zjRateFail)) '%    溢价浪费年化收益率：' num2str(resultY(resultTable.zjRateFail)) '%'],'FontSize',10);
-%     text(xmin+10,ymax-inner*9.5,['涨跌停剩余总收益率：' num2str(result(resultTable.tradeLimitLeft)) '%    涨跌停浪费年化收益率：' num2str(resultY(resultTable.tradeLimitLeft)) '%'],'FontSize',10);
+    text(xmin+10,ymax-inner*8,['溢价剩余总收益率：' num2str(result(resultTable.yjRateLeft)) '%    溢价剩余年化收益率：' num2str(resultY(resultTable.yjRateLeft)) '%'],'FontSize',10);
+    text(xmin+10,ymax-inner*9,['溢价浪费总收益率：' num2str(result(resultTable.zjRateFail)) '%    溢价浪费年化收益率：' num2str(resultY(resultTable.zjRateFail)) '%'],'FontSize',10);
+    text(xmin+10,ymax-inner*9.5,['涨跌停剩余总收益率：' num2str(result(resultTable.tradeLimitLeft)) '%    涨跌停浪费年化收益率：' num2str(resultY(resultTable.tradeLimitLeft)) '%'],'FontSize',10);
     plot(x,Result(:,resultTable.zsRate),'g');
-%    plot(x,Result(:,resultTable.tlRate) + Result(:,resultTable.zsRate),'b');
-%     plot(x,Result(:,resultTable.zjRateLeft)+1,'k');
-%     plot(x,Result(:,resultTable.zjRatePlus)+1,'y');
-%     plot(x,Result(:,resultTable.yjRateLeft)+1,'c');
-%     plot(x,Result(:,resultTable.tradeLimitLeft)+1,'m');
-%     plot(x,Result(:,resultTable.holdingValue)/(manager.initAsset*manager.handleRate),'Color',[0.6 0.2 0.4]);
-%     legend('套利净值', '沪深300', '资金总净值', '折价套利剩余空间', '二倍折价额外收益', '二倍折价溢价减益','涨跌停剩余收益率','持仓净值波动', -1);
-    legend('套利净值', '沪深300', -1);
+   plot(x,Result(:,resultTable.tlRate) + Result(:,resultTable.zsRate),'b');
+    plot(x,Result(:,resultTable.zjRateLeft)+1,'k');
+    plot(x,Result(:,resultTable.zjRatePlus)+1,'y');
+    plot(x,Result(:,resultTable.yjRateLeft)+1,'c');
+    plot(x,Result(:,resultTable.tradeLimitLeft)+1,'m');
+    plot(x,Result(:,resultTable.holdingValue)/(manager.initAsset*manager.handleRate),'Color',[0.6 0.2 0.4]);
+    legend('套利净值', '沪深300', '资金总净值', '折价套利剩余空间', '二倍折价额外收益', '二倍折价溢价减益','涨跌停剩余收益率','持仓净值波动', -1);
+    %legend('套利净值', '沪深300', -1);
 
     configFile = configFile(1:end-4); % 去除拓展名
     saveDir = ['..\result\分时数据模拟' configFile '_' num2str(slipRatio) '倍滑点_持仓比' num2str(handleRate(1)) '-' num2str(handleRate(2))];
